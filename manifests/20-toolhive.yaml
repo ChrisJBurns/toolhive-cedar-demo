@@ -1,0 +1,72 @@
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPOIDCConfig
+metadata:
+  name: dex
+  namespace: toolhive-demo
+spec:
+  type: inline
+  inline:
+    issuer: http://dex.toolhive-demo.svc.cluster.local:5556/dex
+    jwksUrl: http://dex.toolhive-demo.svc.cluster.local:5556/dex/keys
+    clientId: toolhive-demo
+    insecureAllowHTTP: true
+    jwksAllowPrivateIP: true
+    protectedResourceAllowPrivateIP: true
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPGroup
+metadata:
+  name: demo-backends
+  namespace: toolhive-demo
+spec:
+  description: Conference demo backends
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: gofetch
+  namespace: toolhive-demo
+spec:
+  groupRef:
+    name: demo-backends
+  image: ghcr.io/stackloklabs/gofetch/server:1.0.5
+  transport: streamable-http
+  proxyPort: 8080
+  mcpPort: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: VirtualMCPServer
+metadata:
+  name: cedar-demo
+  namespace: toolhive-demo
+spec:
+  groupRef:
+    name: demo-backends
+  config:
+    aggregation:
+      conflictResolution: priority
+      conflictResolutionConfig:
+        priorityOrder:
+          - gofetch
+  incomingAuth:
+    type: oidc
+    oidcConfigRef:
+      name: dex
+      audience: toolhive-demo
+      scopes:
+        - openid
+        - profile
+        - email
+        - groups
+      resourceUrl: http://127.0.0.1:4483/mcp
+    authzConfigRef:
+      name: fetch-access
+  outgoingAuth:
+    source: discovered

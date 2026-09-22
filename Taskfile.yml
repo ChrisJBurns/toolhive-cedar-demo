@@ -1,0 +1,255 @@
+version: "3"
+
+vars:
+  TOOLHIVE_VERSION: "0.51.0"
+  CLUSTER_NAME: toolhive-cedar-demo
+  STATE_DIR: "{{.ROOT_DIR}}/.state"
+  KUBECONFIG: "{{.STATE_DIR}}/kubeconfig"
+  NAMESPACE: toolhive-demo
+
+env:
+  KUBECONFIG: "{{.KUBECONFIG}}"
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  check:
+    internal: true
+    cmds:
+      - |
+        for command in task kind kubectl helm docker bash curl jq; do
+          command -v "${command}" >/dev/null || {
+            echo "Missing required command: ${command}" >&2
+            exit 1
+          }
+        done
+        docker info >/dev/null || {
+          echo "Docker is not running. Start Docker Desktop and try again." >&2
+          exit 1
+        }
+
+  cluster:
+    desc: Create the demo Kind cluster
+    deps: [check]
+    cmds:
+      - mkdir -p "{{.STATE_DIR}}"
+      - |
+        if kind get clusters | grep -qx "{{.CLUSTER_NAME}}"; then
+          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
+          owner="$(kubectl -n kube-system get configmap/cedar-dex-demo-owner \
+            -o jsonpath='{.data.owner}' 2>/dev/null || true)"
+          if [ "${owner}" != "toolhive-cedar-demo" ]; then
+            echo "Refusing to use existing unowned cluster '{{.CLUSTER_NAME}}'." >&2
+            exit 1
+          fi
+          echo "Reusing the Kind cluster created by this demo"
+        else
+          kind create cluster --name "{{.CLUSTER_NAME}}" --wait 120s
+          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
+          kubectl -n kube-system create configmap cedar-dex-demo-owner \
+            --from-literal=owner=toolhive-cedar-demo
+        fi
+
+  operator:
+    desc: Install the pinned official ToolHive charts
+    cmds:
+      - task: cluster
+      - |
+        helm upgrade --install toolhive-operator-crds \
+          oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds \
+          --version "{{.TOOLHIVE_VERSION}}" \
+          --namespace toolhive-system \
+          --create-namespace \
+          --wait \
+          --timeout 5m
+      - |
+        helm upgrade --install toolhive-operator \
+          oci://ghcr.io/stacklok/toolhive/toolhive-operator \
+          --version "{{.TOOLHIVE_VERSION}}" \
+          --namespace toolhive-system \
+          --create-namespace \
+          --wait \
+          --timeout 5m
+      - kubectl -n toolhive-system rollout status deployment/toolhive-operator --timeout=5m
+
+  install:
+    desc: Install Dex, GoFetch, vMCP, and the default Cedar policy
+    cmds:
+      - kubectl apply -f manifests/00-namespace.yaml
+      - kubectl apply -f manifests/10-dex.yaml
+      - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
+      - |
+        kubectl -n {{.NAMESPACE}} get mcpauthzconfig/fetch-access >/dev/null 2>&1 || \
+          kubectl apply -f policies/all-dex-users.yaml
+      - kubectl apply -f manifests/20-toolhive.yaml
+      - task: ready
+      - task: apply-policy
+        vars:
+          POLICY_FILE: policies/all-dex-users.yaml
+
+  up:
+    desc: Create the complete conference demo
+    cmds:
+      - task: operator
+      - task: install
+      - echo "Demo ready. Run 'task demo USER=alice@example.com'."
+
+  ready:
+    desc: Wait for every ToolHive resource to become ready
+    cmds:
+      - kubectl -n {{.NAMESPACE}} wait --for=condition=Valid mcpoidcconfig/dex --timeout=2m
+      - kubectl -n {{.NAMESPACE}} wait --for=condition=Valid mcpauthzconfig/fetch-access --timeout=2m
+      - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready mcpserver/gofetch --timeout=5m
+      - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
+      - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready virtualmcpserver/cedar-demo --timeout=5m
+
+  forward:
+    desc: Expose Dex on :5556 and vMCP on :4483 (blocking)
+    cmds:
+      - |
+        set -eu
+        kubectl -n {{.NAMESPACE}} port-forward service/dex 5556:5556 &
+        dex_pid=$!
+        kubectl -n {{.NAMESPACE}} port-forward service/vmcp-cedar-demo 4483:4483 &
+        vmcp_pid=$!
+        trap 'kill "${dex_pid}" "${vmcp_pid}" 2>/dev/null || true' EXIT INT TERM
+        sleep 1
+        if ! kill -0 "${dex_pid}" 2>/dev/null || ! kill -0 "${vmcp_pid}" 2>/dev/null; then
+          echo "One or more port-forwards failed to start" >&2
+          exit 1
+        fi
+        wait
+
+  token:
+    desc: Print a Dex access token (USER defaults to Alice)
+    vars:
+      USER: '{{.USER | default "alice@example.com"}}'
+    cmds:
+      - silent: true
+        cmd: scripts/get-token.sh "{{.USER}}"
+
+  demo:
+    desc: Log in and invoke GoFetch (USER defaults to Alice)
+    vars:
+      USER: '{{.USER | default "alice@example.com"}}'
+    cmds:
+      - scripts/demo.sh "{{.USER}}"
+
+  policy-all:
+    desc: Allow all configured Dex users to call fetch
+    cmds:
+      - task: apply-policy
+        vars:
+          POLICY_FILE: policies/all-dex-users.yaml
+
+  policy-engineering:
+    desc: Allow only the Dex engineering group to call fetch
+    cmds:
+      - task: apply-policy
+        vars:
+          POLICY_FILE: policies/engineering-only.yaml
+
+  policy-alice:
+    desc: Allow only the Alice Dex identity to call fetch
+    cmds:
+      - task: apply-policy
+        vars:
+          POLICY_FILE: policies/alice-only.yaml
+
+  apply-policy:
+    internal: true
+    cmds:
+      - |
+        diff_status=0
+        kubectl diff -f "{{.POLICY_FILE}}" >/dev/null 2>&1 || diff_status=$?
+        if [ "${diff_status}" -eq 0 ]; then
+          echo "Policy is already active"
+          exit 0
+        fi
+        if [ "${diff_status}" -ne 1 ]; then
+          kubectl diff -f "{{.POLICY_FILE}}"
+          exit "${diff_status}"
+        fi
+
+        old_authz_hash="$(kubectl -n {{.NAMESPACE}} get virtualmcpserver/cedar-demo \
+          -o jsonpath='{.status.authzConfigHash}' 2>/dev/null || true)"
+        old_runconfig_hash="$(kubectl -n {{.NAMESPACE}} get deployment/cedar-demo \
+          -o jsonpath='{.spec.template.metadata.annotations.toolhive\.stacklok\.dev/runconfig-checksum}' \
+          2>/dev/null || true)"
+        kubectl apply -f "{{.POLICY_FILE}}"
+
+        new_authz_hash=""
+        attempt=0
+        while [ "${attempt}" -lt 120 ]; do
+          new_authz_hash="$(kubectl -n {{.NAMESPACE}} get virtualmcpserver/cedar-demo \
+            -o jsonpath='{.status.authzConfigHash}' 2>/dev/null || true)"
+          if [ -n "${new_authz_hash}" ] && [ "${new_authz_hash}" != "${old_authz_hash}" ]; then
+            break
+          fi
+          attempt=$((attempt + 1))
+          sleep 1
+        done
+        if [ -z "${new_authz_hash}" ] || [ "${new_authz_hash}" = "${old_authz_hash}" ]; then
+          echo "Timed out waiting for vMCP to observe the new policy" >&2
+          exit 1
+        fi
+
+        new_runconfig_hash=""
+        attempt=0
+        while [ "${attempt}" -lt 120 ]; do
+          new_runconfig_hash="$(kubectl -n {{.NAMESPACE}} get deployment/cedar-demo \
+            -o jsonpath='{.spec.template.metadata.annotations.toolhive\.stacklok\.dev/runconfig-checksum}' \
+            2>/dev/null || true)"
+          if [ -n "${new_runconfig_hash}" ] && [ "${new_runconfig_hash}" != "${old_runconfig_hash}" ]; then
+            break
+          fi
+          attempt=$((attempt + 1))
+          sleep 1
+        done
+        if [ -z "${new_runconfig_hash}" ] || [ "${new_runconfig_hash}" = "${old_runconfig_hash}" ]; then
+          echo "Timed out waiting for the vMCP deployment update" >&2
+          exit 1
+        fi
+      - kubectl -n {{.NAMESPACE}} rollout status deployment/cedar-demo --timeout=3m
+
+  status:
+    desc: Show demo resources and status
+    cmds:
+      - kubectl -n {{.NAMESPACE}} get pods,services
+      - kubectl -n {{.NAMESPACE}} get mcpoidcconfig,mcpauthzconfig,mcpgroup,mcpserver,virtualmcpserver
+
+  versions:
+    desc: Show installed charts and container images
+    cmds:
+      - helm -n toolhive-system list
+      - kubectl -n toolhive-system get deployment/toolhive-operator -o jsonpath='{.spec.template.spec.containers[*].image}{"\n"}'
+      - kubectl -n {{.NAMESPACE}} get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}'
+
+  logs:
+    desc: Show recent operator, vMCP, and Dex logs
+    cmds:
+      - kubectl -n toolhive-system logs deployment/toolhive-operator --tail=100
+      - kubectl -n {{.NAMESPACE}} logs deployment/cedar-demo --tail=100
+      - kubectl -n {{.NAMESPACE}} logs deployment/dex --tail=100
+
+  down:
+    desc: Delete the demo-owned Kind cluster
+    cmds:
+      - mkdir -p "{{.STATE_DIR}}"
+      - |
+        set -eu
+        if kind get clusters | grep -qx "{{.CLUSTER_NAME}}"; then
+          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
+          owner="$(kubectl -n kube-system get configmap/cedar-dex-demo-owner \
+            -o jsonpath='{.data.owner}' 2>/dev/null || true)"
+          if [ "${owner}" != "toolhive-cedar-demo" ]; then
+            echo "Refusing to delete unowned cluster '{{.CLUSTER_NAME}}'." >&2
+            exit 1
+          fi
+          kind delete cluster --name "{{.CLUSTER_NAME}}"
+          rm -f "{{.KUBECONFIG}}"
+        else
+          echo "Kind cluster '{{.CLUSTER_NAME}}' does not exist"
+        fi

@@ -1,0 +1,12 @@
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPAuthzConfig
+metadata:
+  name: fetch-access
+  namespace: toolhive-demo
+spec:
+  type: cedarv1
+  config:
+    policies:
+      - 'permit(principal, action == Action::"call_tool", resource == Tool::"fetch") when { principal has claim_email && principal.claim_email == "alice@example.com" };'
+    entities_json: '[]'
+    group_claim_name: groups
