@@ -113,19 +113,11 @@ kubectl apply -f manifests/00-namespace.yaml
 Create a fine-grained GitHub token with repository access and read/write Issues
 permission. Then use the Task helper to enter it without echoing it in the
 terminal. The helper strips carriage returns and newlines, saves the token to
-the gitignored `.state/github-token` file, and restricts access to that file:
+the gitignored `.state/github-token` file, restricts access to that file, and
+creates the `github-token` Kubernetes Secret:
 
 ```bash
 task create-github-token
-```
-
-Create a Kubernetes Secret directly from that file:
-
-```bash
-kubectl -n toolhive-demo create secret generic github-token \
-  --from-file=token=.state/github-token \
-  --dry-run=client \
-  -o yaml | kubectl apply -f -
 ```
 
 The Secret is injected into the GitHub MCP server as

@@ -104,6 +104,10 @@ tasks:
     desc: Prompt for and securely save the GitHub token
     cmds:
       - scripts/create-github-token.sh "{{.GITHUB_TOKEN_FILE}}"
+      - |
+        if kubectl get namespace {{.NAMESPACE}} >/dev/null 2>&1; then
+          task github-secret GITHUB_TOKEN_FILE="{{.GITHUB_TOKEN_FILE}}" KUBECONFIG="{{.KUBECONFIG}}" NAMESPACE="{{.NAMESPACE}}"
+        fi
 
   github-secret:
     desc: Load the GitHub token file into Kubernetes
