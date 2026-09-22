@@ -78,10 +78,8 @@ tasks:
       - kubectl -n toolhive-system rollout status deployment/toolhive-operator --timeout=5m
 
   install:
-    desc: Install Dex, MKP, GitHub, vMCP, and the Cedar policy
+    desc: Install Dex, MKP, GitHub, vMCP, and the Cedar policy into the prepared namespace
     cmds:
-      - kubectl apply -f manifests/00-namespace.yaml
-      - task: github-secret
       - kubectl apply -f manifests/10-dex.yaml
       - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
       - |
@@ -97,6 +95,13 @@ tasks:
     desc: Create the complete conference demo
     cmds:
       - task: operator
+      - kubectl apply -f manifests/00-namespace.yaml
+      - |
+        if test -s "{{.GITHUB_TOKEN_FILE}}"; then
+          task github-secret GITHUB_TOKEN_FILE="{{.GITHUB_TOKEN_FILE}}" KUBECONFIG="{{.KUBECONFIG}}" NAMESPACE="{{.NAMESPACE}}"
+        else
+          task create-github-token GITHUB_TOKEN_FILE="{{.GITHUB_TOKEN_FILE}}" KUBECONFIG="{{.KUBECONFIG}}" NAMESPACE="{{.NAMESPACE}}"
+        fi
       - task: install
       - echo "Demo ready. Run 'task demo USER=alice@example.com'."
 
@@ -104,10 +109,7 @@ tasks:
     desc: Prompt for and securely save the GitHub token
     cmds:
       - scripts/create-github-token.sh "{{.GITHUB_TOKEN_FILE}}"
-      - |
-        if kubectl get namespace {{.NAMESPACE}} >/dev/null 2>&1; then
-          task github-secret GITHUB_TOKEN_FILE="{{.GITHUB_TOKEN_FILE}}" KUBECONFIG="{{.KUBECONFIG}}" NAMESPACE="{{.NAMESPACE}}"
-        fi
+      - task github-secret GITHUB_TOKEN_FILE="{{.GITHUB_TOKEN_FILE}}" KUBECONFIG="{{.KUBECONFIG}}" NAMESPACE="{{.NAMESPACE}}"
 
   github-secret:
     desc: Load the GitHub token file into Kubernetes
