@@ -37,14 +37,16 @@ curl 7.76 or newer, and `jq`.
 ```bash
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
+mkdir -p .state
+vim .state/github-token
 task up
 task demo USER=alice@example.com
 task demo USER=bob@example.com
 ```
 
 `task up` creates the `toolhive-cedar-demo` Kind cluster, installs the official
-ToolHive charts from GHCR, prompts for a GitHub token when one has not already
-been saved, applies all demo resources, and waits for them to become ready.
+ToolHive charts from GHCR, cleans and loads the saved GitHub token, applies all
+demo resources, and waits for them to become ready.
 
 The token file is gitignored. To use a file elsewhere, override its location:
 
