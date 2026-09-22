@@ -103,6 +103,10 @@ tasks:
     preconditions:
       - sh: test -s "{{.GITHUB_TOKEN_FILE}}"
         msg: "Create {{.GITHUB_TOKEN_FILE}} containing a GitHub token"
+      - sh: |
+          last_byte="$(tail -c 1 "{{.GITHUB_TOKEN_FILE}}" | od -An -tx1 | tr -d '[:space:]')"
+          test "${last_byte}" != "0a" && test "${last_byte}" != "0d"
+        msg: "{{.GITHUB_TOKEN_FILE}} must not end with a newline"
     cmds:
       - |
         kubectl -n {{.NAMESPACE}} create secret generic github-token \
