@@ -310,7 +310,6 @@ First show the active Cedar policy, then authenticate as Alice:
 
 ```bash
 cat policies/engineering-only.yaml
-task policy-engineering
 task demo USER=alice@example.com
 ```
 
