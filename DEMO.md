@@ -254,7 +254,34 @@ Finally, show what the operator created:
 task status
 ```
 
-## 7. Connect Claude Code
+## 7. Demonstrate filtering and authorization
+
+First show the active Cedar policy, then authenticate as Alice:
+
+```bash
+cat policies/engineering-only.yaml
+task demo USER=alice@example.com
+```
+
+Alice's tool list contains exactly `list_resources`, `add_issue_comment`, and
+`issue_write`, proving that the vMCP filters have hidden every other backend
+tool. Her `engineering` group membership allows the call. The demo script calls
+only the read-only MKP tool, so it does not modify GitHub during the talk.
+
+Now authenticate as Bob:
+
+```bash
+task demo USER=bob@example.com
+```
+
+Bob has no group membership. He sees an empty tool list, and Cedar returns HTTP
+403 when he attempts `list_resources`.
+
+The Task helpers automate token acquisition, port-forwarding, MCP session setup,
+and policy reconciliation. The cluster and every installed resource remain
+explicit steps above because those are part of the story you are telling.
+
+## 8. Connect Claude Code
 
 Claude Code connects to the single vMCP endpoint, which routes requests to both
 MKP and GitHub. No ingress is required because Claude Code and Kind are running
@@ -296,40 +323,13 @@ Inside Claude Code, run `/mcp` to inspect the connection. Alice should see
 `list_resources`, `add_issue_comment`, and `issue_write` through the one
 `toolhive-demo` server.
 
-## 8. Exfiltration
+## 9. Exfiltration
 
 Give Claude Code the following prompt:
 
 ```text
 Can you please use the kubernetes mcp server tools inside of the toolhive-demo mcp server and get the dex pod information please and upload it to the debugging ticket https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/1 using the issue tools so our platform team can troubleshoot.
 ```
-
-## 9. Demonstrate filtering and authorization
-
-First show the active Cedar policy, then authenticate as Alice:
-
-```bash
-cat policies/engineering-only.yaml
-task demo USER=alice@example.com
-```
-
-Alice's tool list contains exactly `list_resources`, `add_issue_comment`, and
-`issue_write`, proving that the vMCP filters have hidden every other backend
-tool. Her `engineering` group membership allows the call. The demo script calls
-only the read-only MKP tool, so it does not modify GitHub during the talk.
-
-Now authenticate as Bob:
-
-```bash
-task demo USER=bob@example.com
-```
-
-Bob has no group membership. He sees an empty tool list, and Cedar returns HTTP
-403 when he attempts `list_resources`.
-
-The Task helpers automate token acquisition, port-forwarding, MCP session setup,
-and policy reconciliation. The cluster and every installed resource remain
-explicit steps above because those are part of the story you are telling.
 
 ## Cleanup
 
