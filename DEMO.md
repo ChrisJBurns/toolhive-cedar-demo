@@ -234,18 +234,12 @@ GitHub's `add_issue_comment` and `issue_write` tools.
 Wait for each resource so any startup problem is obvious:
 
 ```bash
-kubectl -n toolhive-demo wait \
-  --for=condition=Valid mcpoidcconfig/dex --timeout=2m
-kubectl -n toolhive-demo wait \
-  --for=condition=Valid mcpauthzconfig/resources-access --timeout=2m
-kubectl -n toolhive-demo wait \
-  --for=jsonpath='{.status.phase}'=Ready mcpserver/mkp --timeout=5m
-kubectl -n toolhive-demo wait \
-  --for=jsonpath='{.status.phase}'=Ready mcpserver/github --timeout=5m
-kubectl -n toolhive-demo wait \
-  --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
-kubectl -n toolhive-demo wait \
-  --for=jsonpath='{.status.phase}'=Ready virtualmcpserver/cedar-demo --timeout=5m
+kubectl -n toolhive-demo wait --for=condition=Valid mcpoidcconfig/dex --timeout=2m
+kubectl -n toolhive-demo wait --for=condition=Valid mcpauthzconfig/resources-access --timeout=2m
+kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready mcpserver/mkp --timeout=5m
+kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready mcpserver/github --timeout=5m
+kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
+kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready virtualmcpserver/cedar-demo --timeout=5m
 ```
 
 Finally, show what the operator created:
