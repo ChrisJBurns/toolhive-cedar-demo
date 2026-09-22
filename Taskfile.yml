@@ -1,10 +1,7 @@
 version: "3"
 
 vars:
-  TOOLHIVE_VERSION: "0.51.0"
-  CLUSTER_NAME: toolhive-cedar-demo
-  STATE_DIR: "{{.ROOT_DIR}}/.state"
-  KUBECONFIG: "{{.STATE_DIR}}/kubeconfig"
+  KUBECONFIG: "{{.ROOT_DIR}}/.state/kubeconfig"
   NAMESPACE: toolhive-demo
 
 env:
@@ -14,87 +11,6 @@ tasks:
   default:
     cmds:
       - task --list
-
-  check:
-    internal: true
-    cmds:
-      - |
-        for command in task kind kubectl helm docker bash curl jq; do
-          command -v "${command}" >/dev/null || {
-            echo "Missing required command: ${command}" >&2
-            exit 1
-          }
-        done
-        docker info >/dev/null || {
-          echo "Docker is not running. Start Docker Desktop and try again." >&2
-          exit 1
-        }
-
-  cluster:
-    desc: Create the demo Kind cluster
-    deps: [check]
-    cmds:
-      - mkdir -p "{{.STATE_DIR}}"
-      - |
-        if kind get clusters | grep -qx "{{.CLUSTER_NAME}}"; then
-          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
-          owner="$(kubectl -n kube-system get configmap/cedar-dex-demo-owner \
-            -o jsonpath='{.data.owner}' 2>/dev/null || true)"
-          if [ "${owner}" != "toolhive-cedar-demo" ]; then
-            echo "Refusing to use existing unowned cluster '{{.CLUSTER_NAME}}'." >&2
-            exit 1
-          fi
-          echo "Reusing the Kind cluster created by this demo"
-        else
-          kind create cluster --name "{{.CLUSTER_NAME}}" --wait 120s
-          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
-          kubectl -n kube-system create configmap cedar-dex-demo-owner \
-            --from-literal=owner=toolhive-cedar-demo
-        fi
-
-  operator:
-    desc: Install the pinned official ToolHive charts
-    cmds:
-      - task: cluster
-      - |
-        helm upgrade --install toolhive-operator-crds \
-          oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds \
-          --version "{{.TOOLHIVE_VERSION}}" \
-          --namespace toolhive-system \
-          --create-namespace \
-          --wait \
-          --timeout 5m
-      - |
-        helm upgrade --install toolhive-operator \
-          oci://ghcr.io/stacklok/toolhive/toolhive-operator \
-          --version "{{.TOOLHIVE_VERSION}}" \
-          --namespace toolhive-system \
-          --create-namespace \
-          --wait \
-          --timeout 5m
-      - kubectl -n toolhive-system rollout status deployment/toolhive-operator --timeout=5m
-
-  install:
-    desc: Install Dex, GoFetch, vMCP, and the default Cedar policy
-    cmds:
-      - kubectl apply -f manifests/00-namespace.yaml
-      - kubectl apply -f manifests/10-dex.yaml
-      - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
-      - |
-        kubectl -n {{.NAMESPACE}} get mcpauthzconfig/fetch-access >/dev/null 2>&1 || \
-          kubectl apply -f policies/all-dex-users.yaml
-      - kubectl apply -f manifests/20-toolhive.yaml
-      - task: ready
-      - task: apply-policy
-        vars:
-          POLICY_FILE: policies/all-dex-users.yaml
-
-  up:
-    desc: Create the complete conference demo
-    cmds:
-      - task: operator
-      - task: install
-      - echo "Demo ready. Run 'task demo USER=alice@example.com'."
 
   ready:
     desc: Wait for every ToolHive resource to become ready
@@ -233,23 +149,3 @@ tasks:
       - kubectl -n toolhive-system logs deployment/toolhive-operator --tail=100
       - kubectl -n {{.NAMESPACE}} logs deployment/cedar-demo --tail=100
       - kubectl -n {{.NAMESPACE}} logs deployment/dex --tail=100
-
-  down:
-    desc: Delete the demo-owned Kind cluster
-    cmds:
-      - mkdir -p "{{.STATE_DIR}}"
-      - |
-        set -eu
-        if kind get clusters | grep -qx "{{.CLUSTER_NAME}}"; then
-          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
-          owner="$(kubectl -n kube-system get configmap/cedar-dex-demo-owner \
-            -o jsonpath='{.data.owner}' 2>/dev/null || true)"
-          if [ "${owner}" != "toolhive-cedar-demo" ]; then
-            echo "Refusing to delete unowned cluster '{{.CLUSTER_NAME}}'." >&2
-            exit 1
-          fi
-          kind delete cluster --name "{{.CLUSTER_NAME}}"
-          rm -f "{{.KUBECONFIG}}"
-        else
-          echo "Kind cluster '{{.CLUSTER_NAME}}' does not exist"
-        fi

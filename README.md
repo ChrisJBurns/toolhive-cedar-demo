@@ -1,6 +1,7 @@
 # ToolHive + Dex + Cedar demo
 
-This standalone conference demo creates a disposable Kind cluster containing:
+This standalone conference demo walks through a disposable Kind cluster
+containing:
 
 - ToolHive Operator and CRDs installed from the official OCI Helm charts
 - Dex with two local users and group claims
@@ -22,27 +23,19 @@ These were the latest releases when this repository was prepared on
 | Dex | `v2.45.1` |
 | GoFetch | `v1.0.5` |
 
-The versions are pinned so the talk remains reproducible. Update
-`TOOLHIVE_VERSION` in `Taskfile.yml` and the image tags in `manifests/` when you
-intentionally want to move to newer releases.
+The versions are pinned so the talk remains reproducible. Update the chart
+versions in `DEMO.md` and the image tags in `manifests/` when you intentionally
+want to move to newer releases.
 
-## Quick start
+## Run the demo
 
 Supported hosts are macOS, Linux, and WSL2. Prerequisites: Docker,
 [Task](https://taskfile.dev/), Bash, `kind`, `kubectl`, Helm 3.10 or newer,
 curl 7.76 or newer, and `jq`.
 
-```bash
-git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
-cd toolhive-cedar-demo
-task up
-task demo USER=alice@example.com
-task demo USER=bob@example.com
-```
-
-`task up` creates the `toolhive-cedar-demo` Kind cluster, installs the official
-ToolHive charts from GHCR, applies all demo resources, and waits for them to
-become ready.
+Follow [DEMO.md](DEMO.md) for the complete, copy-and-paste conference runbook.
+Cluster creation, Helm installation, and resource creation are intentionally
+shown as individual commands so the setup remains visible while presenting.
 
 Both users have the password `password`:
 
@@ -55,7 +48,7 @@ The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
 MCP session, lists the Cedar-filtered tools, and calls `fetch` against
 `https://example.com`.
 
-## Talk sequence
+## Authorization sequence
 
 Start with the default shared-group policy. Both users are allowed:
 
@@ -107,7 +100,6 @@ task status    # Resource phases, pods, and services
 task versions  # Installed charts and container images
 task logs      # Operator, vMCP, and Dex logs
 task ready     # Wait for every resource
-task down      # Delete the demo-owned Kind cluster
 ```
 
 This is deliberately a local-only demo. It enables HTTP OIDC, the OAuth password
