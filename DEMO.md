@@ -144,11 +144,11 @@ Dex has two static demo identities. Both use the password `password`:
 
 | User | Groups |
 | --- | --- |
-| `alice@example.com` | `toolhive-users`, `engineering` |
-| `bob@example.com` | `toolhive-users`, `finance` |
+| `alice@example.com` | `engineering` |
+| `bob@example.com` | None |
 
-Both identities share `toolhive-users`, but that group deliberately receives no
-permission. Only Alice's `engineering` membership permits the tool call.
+Alice's `engineering` membership permits the tool calls. Bob has no group
+membership, so Cedar denies him access.
 
 ## 5. Apply the Cedar policy
 
@@ -248,8 +248,8 @@ Now authenticate as Bob:
 task demo USER=bob@example.com
 ```
 
-Bob belongs to `toolhive-users` but not `engineering`. He sees an empty tool
-list, and Cedar returns HTTP 403 when he attempts `list_resources`.
+Bob has no group membership. He sees an empty tool list, and Cedar returns HTTP
+403 when he attempts `list_resources`.
 
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
 and policy reconciliation. The cluster and every installed resource remain

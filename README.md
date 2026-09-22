@@ -10,8 +10,7 @@ This standalone conference demo creates a disposable Kind cluster containing:
 
 The vMCP exposes MKP's `list_resources` tool plus GitHub's
 `add_issue_comment` and `issue_write` tools. The Cedar policy permits those
-tools for `THVGroup::"engineering"`; membership of the broader
-`toolhive-users` group grants no access.
+tools for `THVGroup::"engineering"`. Users outside that group have no access.
 
 ## Pinned releases
 
@@ -66,8 +65,8 @@ Both users have the password `password`:
 
 | User | Dex groups |
 | --- | --- |
-| `alice@example.com` | `toolhive-users`, `engineering` |
-| `bob@example.com` | `toolhive-users`, `finance` |
+| `alice@example.com` | `engineering` |
+| `bob@example.com` | None |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
 MCP session, lists the filtered tools, and calls `list_resources` for pods in
@@ -81,16 +80,16 @@ Apply the engineering-only policy to restore the intended state at any time:
 task policy-engineering
 ```
 
-Alice belongs to both `toolhive-users` and `engineering`. She sees exactly
-`list_resources`, `add_issue_comment`, and `issue_write`. The demo safely calls
-only `list_resources`:
+Alice belongs to `engineering`. She sees exactly `list_resources`,
+`add_issue_comment`, and `issue_write`. The demo safely calls only
+`list_resources`:
 
 ```bash
 task demo USER=alice@example.com
 ```
 
-Bob belongs to `toolhive-users` but not `engineering`. Cedar removes the tool
-from his list and returns HTTP 403 when he attempts the call:
+Bob has no group membership. Cedar removes every tool from his list and returns
+HTTP 403 when he attempts the call:
 
 ```bash
 task demo USER=bob@example.com
