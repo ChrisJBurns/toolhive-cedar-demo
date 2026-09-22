@@ -343,15 +343,3 @@ rm -f .state/kubeconfig
 
 The GitHub token remains in `.state/github-token` for another rehearsal. Remove
 that file separately when you no longer need it.
-
-## Recovery commands
-
-If something does not become ready on stage, these provide a quick view of the
-current state:
-
-```bash
-task status
-task logs
-kubectl -n toolhive-system get events --sort-by=.lastTimestamp
-kubectl -n toolhive-demo get events --sort-by=.lastTimestamp
-```
