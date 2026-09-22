@@ -50,12 +50,10 @@ export KUBECONFIG="$PWD/.state/kubeconfig"
 ```
 
 Re-run the `export` command in any new terminal used for raw Helm or `kubectl`
-commands. Show the audience the current context and the cluster baseline:
+commands. Show the audience the namespaces in the new cluster before installing
+anything:
 
 ```bash
-kubectl config current-context
-kubectl cluster-info
-kubectl get nodes
 kubectl get namespaces
 ```
 
