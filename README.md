@@ -28,7 +28,7 @@ The versions are pinned so the talk remains reproducible. Update
 `TOOLHIVE_VERSION` in `Taskfile.yml` and the image tags in `manifests/` when you
 intentionally want to move to newer releases.
 
-## Quick start
+## Conference walkthrough
 
 Supported hosts are macOS, Linux, and WSL2. Prerequisites: Docker,
 [Task](https://taskfile.dev/), Bash, `kind`, `kubectl`, Helm 3.10 or newer,
@@ -37,28 +37,21 @@ curl 7.76 or newer, and `jq`.
 ```bash
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
-mkdir -p .state
-vim .state/github-token
-task up
-task demo USER=alice@example.com
-task demo USER=bob@example.com
 ```
 
-`task up` creates the `toolhive-cedar-demo` Kind cluster, installs the official
-ToolHive charts from GHCR, cleans and loads the saved GitHub token, applies all
-demo resources, and waits for them to become ready.
+Follow [DEMO.md](DEMO.md) for the command-by-command stage setup. Cluster
+creation, chart installation, and resource application remain explicit so the
+audience can see each part of the system being assembled.
 
 The token file is gitignored. To use a file elsewhere, override its location:
 
 ```bash
-task up GITHUB_TOKEN_FILE=/secure/path/github-token
+task create-github-token GITHUB_TOKEN_FILE=/secure/path/github-token
 ```
 
 Use a fine-grained token with repository access and read/write Issues
 permission. ToolHive creates the `github-token` Kubernetes Secret from the file
 and injects it into the GitHub MCP server; the token never enters a manifest.
-
-For the command-by-command stage setup, follow [DEMO.md](DEMO.md).
 
 Both users have the password `password`:
 

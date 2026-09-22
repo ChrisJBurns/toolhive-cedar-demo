@@ -91,19 +91,22 @@ tasks:
         vars:
           POLICY_FILE: policies/engineering-only.yaml
 
-  up:
-    desc: Create the complete conference demo
-    cmds:
-      - task: operator
-      - kubectl apply -f manifests/00-namespace.yaml
-      - task: create-github-token
-      - task: install
-      - echo "Demo ready. Run 'task demo USER=alice@example.com'."
-
   create-github-token:
     desc: Clean and securely load the GitHub token file
+    preconditions:
+      - sh: test -s "{{.GITHUB_TOKEN_FILE}}"
+        msg: "Create {{.GITHUB_TOKEN_FILE}} containing a GitHub token"
     cmds:
-      - scripts/create-github-token.sh "{{.GITHUB_TOKEN_FILE}}"
+      - |
+        chmod 600 "{{.GITHUB_TOKEN_FILE}}"
+        github_token=$(tr -d '\r\n' < "{{.GITHUB_TOKEN_FILE}}")
+        if [ -z "$github_token" ]; then
+          echo "GitHub token must not be empty" >&2
+          exit 1
+        fi
+        printf '%s' "$github_token" > "{{.GITHUB_TOKEN_FILE}}"
+        unset github_token
+        echo "Cleaned GitHub token file {{.GITHUB_TOKEN_FILE}}"
       - task github-secret GITHUB_TOKEN_FILE="{{.GITHUB_TOKEN_FILE}}" KUBECONFIG="{{.KUBECONFIG}}" NAMESPACE="{{.NAMESPACE}}"
 
   github-secret:
