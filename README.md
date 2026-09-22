@@ -37,8 +37,6 @@ curl 7.76 or newer, and `jq`.
 ```bash
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
-mkdir -p .state
-vim .state/github-token
 task format-github-token
 task up
 task demo USER=alice@example.com

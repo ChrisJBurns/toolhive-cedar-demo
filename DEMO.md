@@ -126,16 +126,10 @@ Create an isolated namespace:
 kubectl apply -f manifests/00-namespace.yaml
 ```
 
-Put a fine-grained GitHub token in `.state/github-token`. Give it repository
-access and read/write Issues permission. The `.state` directory is gitignored.
-Using an editor avoids shell-specific `read` options:
-
-```bash
-vim .state/github-token
-```
-
-After saving the file, use the Task helper to remove carriage returns and
-newlines and restrict access to the file:
+Create a fine-grained GitHub token with repository access and read/write Issues
+permission. Then use the Task helper to enter it without echoing it in the
+terminal. The helper strips carriage returns and newlines, saves the token to
+the gitignored `.state/github-token` file, and restricts access to that file:
 
 ```bash
 task format-github-token
