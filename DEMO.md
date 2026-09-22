@@ -132,7 +132,7 @@ terminal. The helper strips carriage returns and newlines, saves the token to
 the gitignored `.state/github-token` file, and restricts access to that file:
 
 ```bash
-task format-github-token
+task create-github-token
 ```
 
 Create a Kubernetes Secret directly from that file:

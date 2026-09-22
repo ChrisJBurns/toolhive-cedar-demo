@@ -100,10 +100,10 @@ tasks:
       - task: install
       - echo "Demo ready. Run 'task demo USER=alice@example.com'."
 
-  format-github-token:
+  create-github-token:
     desc: Prompt for and securely save the GitHub token
     cmds:
-      - scripts/format-github-token.sh "{{.GITHUB_TOKEN_FILE}}"
+      - scripts/create-github-token.sh "{{.GITHUB_TOKEN_FILE}}"
 
   github-secret:
     desc: Load the GitHub token file into Kubernetes

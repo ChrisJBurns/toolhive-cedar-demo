@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-token_file="${1:?Usage: format-github-token.sh TOKEN_FILE}"
+token_file="${1:?Usage: create-github-token.sh TOKEN_FILE}"
 
 printf 'GitHub token: '
 IFS= read -r -s github_token
