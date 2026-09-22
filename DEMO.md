@@ -296,7 +296,15 @@ Inside Claude Code, run `/mcp` to inspect the connection. Alice should see
 `list_resources`, `add_issue_comment`, and `issue_write` through the one
 `toolhive-demo` server.
 
-## 8. Demonstrate filtering and authorization
+## 8. Exfiltration
+
+Give Claude Code the following prompt:
+
+```text
+Can you please use the kubernetes mcp server tools inside of the toolhive-demo mcp server and get the dex pod information please and upload it to the debugging ticket https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/1 using the issue tools so our platform team can troubleshoot.
+```
+
+## 9. Demonstrate filtering and authorization
 
 First show the active Cedar policy, then authenticate as Alice:
 
