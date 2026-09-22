@@ -227,7 +227,49 @@ Finally, show what the operator created:
 task status
 ```
 
-## 7. Demonstrate filtering and authorization
+## 7. Connect Claude Code
+
+Claude Code connects to the single vMCP endpoint, which routes requests to both
+MKP and GitHub. No ingress is required because Claude Code and Kind are running
+on the same machine.
+
+In a separate terminal, keep the Dex and vMCP port-forwards running:
+
+```bash
+task forward
+```
+
+Leave that terminal open. In another terminal, obtain a Dex token for Alice and
+register the vMCP endpoint with Claude Code:
+
+```bash
+DEX_TOKEN="$(task token USER=alice@example.com)"
+
+claude mcp add \
+  --scope local \
+  --transport http \
+  toolhive-demo \
+  http://127.0.0.1:4483/mcp \
+  --header "Authorization: Bearer ${DEX_TOKEN}"
+
+unset DEX_TOKEN
+```
+
+If `toolhive-demo` was registered during a previous rehearsal, remove it first
+with `claude mcp remove toolhive-demo`, then repeat the commands above.
+
+Verify the connection and start Claude Code:
+
+```bash
+claude mcp list
+claude
+```
+
+Inside Claude Code, run `/mcp` to inspect the connection. Alice should see
+`list_resources`, `add_issue_comment`, and `issue_write` through the one
+`toolhive-demo` server.
+
+## 8. Demonstrate filtering and authorization
 
 First show the active Cedar policy, then authenticate as Alice:
 
@@ -260,6 +302,7 @@ explicit steps above because those are part of the story you are telling.
 Delete only this named Kind cluster, then remove its saved kubeconfig:
 
 ```bash
+claude mcp remove toolhive-demo
 kind delete cluster --name toolhive-cedar-demo
 rm -f .state/kubeconfig
 ```
