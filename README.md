@@ -24,9 +24,9 @@ These were the latest releases when this repository was prepared on
 | MKP | `v0.4.3` |
 | GitHub MCP Server | `v1.12.2` |
 
-The versions are pinned so the talk remains reproducible. Update
-`TOOLHIVE_VERSION` in `Taskfile.yml` and the image tags in `manifests/` when you
-intentionally want to move to newer releases.
+The versions are pinned so the talk remains reproducible. Update the chart
+versions in `DEMO.md` and the image tags in `manifests/` when you intentionally
+want to move to newer releases.
 
 ## Conference walkthrough
 
