@@ -40,8 +40,9 @@ cd toolhive-cedar-demo
 mkdir -p .state
 vim .state/github-token
 umask 077
-tr -d '\r\n' < .state/github-token > .state/github-token.tmp
-mv .state/github-token.tmp .state/github-token
+github_token=$(tr -d '\r\n' < .state/github-token)
+printf '%s' "$github_token" > .state/github-token
+unset github_token
 chmod 600 .state/github-token
 task up
 task demo USER=alice@example.com

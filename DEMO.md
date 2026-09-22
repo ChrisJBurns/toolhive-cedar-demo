@@ -140,8 +140,9 @@ and Windows line endings:
 
 ```bash
 umask 077
-tr -d '\r\n' < .state/github-token > .state/github-token.tmp
-mv .state/github-token.tmp .state/github-token
+github_token=$(tr -d '\r\n' < .state/github-token)
+printf '%s' "$github_token" > .state/github-token
+unset github_token
 chmod 600 .state/github-token
 test -s .state/github-token
 ```
