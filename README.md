@@ -5,10 +5,12 @@ This standalone conference demo creates a disposable Kind cluster containing:
 - ToolHive Operator and CRDs installed from the official OCI Helm charts
 - Dex with two local users and group claims
 - MKP as a read-only Kubernetes MCP backend
+- The official GitHub MCP server with its token loaded from a local file
 - A Virtual MCP server protected by OIDC and Cedar
 
-The vMCP exposes only MKP's `list_resources` tool. The Cedar policy permits that
-tool for `THVGroup::"engineering"`; membership of the broader
+The vMCP exposes MKP's `list_resources` tool plus GitHub's
+`add_issue_comment` and `issue_write` tools. The Cedar policy permits those
+tools for `THVGroup::"engineering"`; membership of the broader
 `toolhive-users` group grants no access.
 
 ## Pinned releases
@@ -21,6 +23,7 @@ These were the latest releases when this repository was prepared on
 | ToolHive operator and CRD charts | `0.51.0` |
 | Dex | `v2.45.1` |
 | MKP | `v0.4.3` |
+| GitHub MCP Server | `v1.12.2` |
 
 The versions are pinned so the talk remains reproducible. Update
 `TOOLHIVE_VERSION` in `Taskfile.yml` and the image tags in `manifests/` when you
@@ -35,6 +38,11 @@ curl 7.76 or newer, and `jq`.
 ```bash
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
+mkdir -p .state
+read -rsp "GitHub token: " github_token; echo
+printf '%s' "$github_token" > .state/github-token
+unset github_token
+chmod 600 .state/github-token
 task up
 task demo USER=alice@example.com
 task demo USER=bob@example.com
@@ -43,6 +51,16 @@ task demo USER=bob@example.com
 `task up` creates the `toolhive-cedar-demo` Kind cluster, installs the official
 ToolHive charts from GHCR, applies all demo resources, and waits for them to
 become ready.
+
+The token file is gitignored. To use a file elsewhere, override its location:
+
+```bash
+task up GITHUB_TOKEN_FILE=/secure/path/github-token
+```
+
+Use a fine-grained token with repository access and read/write Issues
+permission. ToolHive creates the `github-token` Kubernetes Secret from the file
+and injects it into the GitHub MCP server; the token never enters a manifest.
 
 For the command-by-command stage setup, follow [DEMO.md](DEMO.md).
 
@@ -65,8 +83,9 @@ Apply the engineering-only policy to restore the intended state at any time:
 task policy-engineering
 ```
 
-Alice belongs to both `toolhive-users` and `engineering`. She sees only
-`list_resources` and can call it:
+Alice belongs to both `toolhive-users` and `engineering`. She sees exactly
+`list_resources`, `add_issue_comment`, and `issue_write`. The demo safely calls
+only `list_resources`:
 
 ```bash
 task demo USER=alice@example.com
@@ -79,8 +98,9 @@ from his list and returns HTTP 403 when he attempts the call:
 task demo USER=bob@example.com
 ```
 
-MKP also provides `get_resource`, but the vMCP allow-list hides it. This keeps
-tool filtering separate from Cedar's identity-based authorization decision.
+MKP's `get_resource` and the GitHub server's other tools are hidden by the vMCP
+allow-list. This keeps tool filtering separate from Cedar's identity-based
+authorization decision.
 
 ## Connect another MCP client
 
@@ -103,6 +123,7 @@ Configure the client to send that value as `Authorization: Bearer <token>`.
 ```bash
 task status    # Resource phases, pods, and services
 task versions  # Installed charts and container images
+task github-secret GITHUB_TOKEN_FILE=/secure/path/github-token  # Rotate token
 task logs      # Operator, vMCP, and Dex logs
 task ready     # Wait for every resource
 task down      # Delete the demo-owned Kind cluster
@@ -110,5 +131,6 @@ task down      # Delete the demo-owned Kind cluster
 
 This is deliberately a local-only demo. It grants MKP the cluster-wide built-in
 `view` role and enables HTTP OIDC, the OAuth password grant, static users, and a
-known client secret for deterministic conference use. Do not reuse these
-settings in production.
+known client secret for deterministic conference use. Protect and remove the
+local GitHub token file when it is no longer needed. Do not reuse these settings
+in production.

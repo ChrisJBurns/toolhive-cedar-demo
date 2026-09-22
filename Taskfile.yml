@@ -5,6 +5,7 @@ vars:
   CLUSTER_NAME: toolhive-cedar-demo
   STATE_DIR: "{{.ROOT_DIR}}/.state"
   KUBECONFIG: "{{.STATE_DIR}}/kubeconfig"
+  GITHUB_TOKEN_FILE: "{{.STATE_DIR}}/github-token"
   NAMESPACE: toolhive-demo
 
 env:
@@ -75,9 +76,10 @@ tasks:
       - kubectl -n toolhive-system rollout status deployment/toolhive-operator --timeout=5m
 
   install:
-    desc: Install Dex, MKP, vMCP, and the Cedar policy
+    desc: Install Dex, MKP, GitHub, vMCP, and the Cedar policy
     cmds:
       - kubectl apply -f manifests/00-namespace.yaml
+      - task: github-secret
       - kubectl apply -f manifests/10-dex.yaml
       - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
       - |
@@ -96,12 +98,29 @@ tasks:
       - task: install
       - echo "Demo ready. Run 'task demo USER=alice@example.com'."
 
+  github-secret:
+    desc: Load the GitHub token file into Kubernetes
+    preconditions:
+      - sh: test -s "{{.GITHUB_TOKEN_FILE}}"
+        msg: "Create {{.GITHUB_TOKEN_FILE}} containing a GitHub token"
+    cmds:
+      - |
+        kubectl -n {{.NAMESPACE}} create secret generic github-token \
+          --from-file=token="{{.GITHUB_TOKEN_FILE}}" \
+          --dry-run=client \
+          -o yaml | kubectl apply -f -
+        if kubectl -n {{.NAMESPACE}} get statefulset/github >/dev/null 2>&1; then
+          kubectl -n {{.NAMESPACE}} rollout restart statefulset/github
+          kubectl -n {{.NAMESPACE}} rollout status statefulset/github --timeout=3m
+        fi
+
   ready:
     desc: Wait for every ToolHive resource to become ready
     cmds:
       - kubectl -n {{.NAMESPACE}} wait --for=condition=Valid mcpoidcconfig/dex --timeout=2m
       - kubectl -n {{.NAMESPACE}} wait --for=condition=Valid mcpauthzconfig/resources-access --timeout=2m
       - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready mcpserver/mkp --timeout=5m
+      - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready mcpserver/github --timeout=5m
       - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
       - kubectl -n {{.NAMESPACE}} wait --for=jsonpath='{.status.phase}'=Ready virtualmcpserver/cedar-demo --timeout=5m
 
@@ -138,7 +157,7 @@ tasks:
       - scripts/demo.sh "{{.USER}}"
 
   policy-engineering:
-    desc: Allow only engineering to call list_resources
+    desc: Allow engineering to call the exposed tools
     cmds:
       - task: apply-policy
         vars:
@@ -214,11 +233,12 @@ tasks:
       - kubectl -n {{.NAMESPACE}} get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}'
 
   logs:
-    desc: Show recent operator, vMCP, MKP, and Dex logs
+    desc: Show recent operator, vMCP, MKP, GitHub, and Dex logs
     cmds:
       - kubectl -n toolhive-system logs deployment/toolhive-operator --tail=100
       - kubectl -n {{.NAMESPACE}} logs deployment/cedar-demo --tail=100
       - kubectl -n {{.NAMESPACE}} logs deployment/mkp --tail=100
+      - kubectl -n {{.NAMESPACE}} logs deployment/github --tail=100
       - kubectl -n {{.NAMESPACE}} logs deployment/dex --tail=100
 
   down:

@@ -64,6 +64,29 @@ spec:
       memory: 128Mi
 ---
 apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: github
+  namespace: toolhive-demo
+spec:
+  groupRef:
+    name: demo-backends
+  image: ghcr.io/github/github-mcp-server:v1.12.2
+  transport: stdio
+  proxyPort: 8080
+  secrets:
+    - name: github-token
+      key: token
+      targetEnvName: GITHUB_PERSONAL_ACCESS_TOKEN
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
 kind: VirtualMCPServer
 metadata:
   name: cedar-demo
@@ -78,10 +101,15 @@ spec:
       conflictResolutionConfig:
         priorityOrder:
           - mkp
+          - github
       tools:
         - workload: mkp
           filter:
             - list_resources
+        - workload: github
+          filter:
+            - add_issue_comment
+            - issue_write
   incomingAuth:
     type: oidc
     oidcConfigRef:

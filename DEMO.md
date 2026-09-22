@@ -30,6 +30,7 @@ The demo uses these pinned versions:
 - ToolHive operator and CRD charts: `0.51.0`
 - Dex: `v2.45.1`
 - MKP: `v0.4.3`
+- GitHub MCP Server: `v1.12.2`
 
 ## 1. Create the Kubernetes cluster
 
@@ -103,12 +104,42 @@ kubectl -n toolhive-system get pods
 helm -n toolhive-system list
 ```
 
-## 4. Install Dex
+## 4. Load the GitHub token and install Dex
 
-Create an isolated namespace, then install the local Dex identity provider:
+Create an isolated namespace:
 
 ```bash
 kubectl apply -f manifests/00-namespace.yaml
+```
+
+Put a fine-grained GitHub token in `.state/github-token` with no trailing
+newline. Give it repository access and read/write Issues permission. The
+`.state` directory is gitignored. One terminal-safe way to create it is:
+
+```bash
+read -rsp "GitHub token: " github_token; echo
+printf '%s' "$github_token" > .state/github-token
+unset github_token
+chmod 600 .state/github-token
+```
+
+Create a Kubernetes Secret directly from that file:
+
+```bash
+test -s .state/github-token
+kubectl -n toolhive-demo create secret generic github-token \
+  --from-file=token=.state/github-token \
+  --dry-run=client \
+  -o yaml | kubectl apply -f -
+```
+
+The Secret is injected into the GitHub MCP server as
+`GITHUB_PERSONAL_ACCESS_TOKEN`; the token value never appears in a manifest or
+the terminal output.
+
+Now install the local Dex identity provider:
+
+```bash
 kubectl apply -f manifests/10-dex.yaml
 kubectl -n toolhive-demo rollout status deployment/dex --timeout=3m
 ```
@@ -132,14 +163,24 @@ cat policies/engineering-only.yaml
 kubectl apply -f policies/engineering-only.yaml
 ```
 
-Its Cedar statement permits only principals in `engineering` to invoke MKP's
-`list_resources` tool. Cedar denies every request that has no matching permit:
+Its Cedar statements permit only principals in `engineering` to invoke the
+three exposed tools. Cedar denies every request that has no matching permit:
 
 ```cedar
 permit(
   principal in THVGroup::"engineering",
   action == Action::"call_tool",
   resource == Tool::"list_resources"
+);
+permit(
+  principal in THVGroup::"engineering",
+  action == Action::"call_tool",
+  resource == Tool::"add_issue_comment"
+);
+permit(
+  principal in THVGroup::"engineering",
+  action == Action::"call_tool",
+  resource == Tool::"issue_write"
 );
 ```
 
@@ -158,10 +199,14 @@ That manifest creates the following pieces:
 2. A service account with Kubernetes's read-only `view` role.
 3. An `MCPGroup` for the demo backends.
 4. An `MCPServer` running MKP in read-only mode.
-5. A `VirtualMCPServer` that aggregates MKP and enforces OIDC and Cedar.
+5. An `MCPServer` running the official GitHub server with its token injected
+   from the Kubernetes Secret.
+6. A `VirtualMCPServer` that aggregates both backends and enforces OIDC and
+   Cedar.
 
 MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
-only that tool, hiding MKP's other tool, `get_resource`.
+only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
+GitHub's `add_issue_comment` and `issue_write` tools.
 
 Wait for each resource so any startup problem is obvious:
 
@@ -172,6 +217,8 @@ kubectl -n toolhive-demo wait \
   --for=condition=Valid mcpauthzconfig/resources-access --timeout=2m
 kubectl -n toolhive-demo wait \
   --for=jsonpath='{.status.phase}'=Ready mcpserver/mkp --timeout=5m
+kubectl -n toolhive-demo wait \
+  --for=jsonpath='{.status.phase}'=Ready mcpserver/github --timeout=5m
 kubectl -n toolhive-demo wait \
   --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
 kubectl -n toolhive-demo wait \
@@ -194,9 +241,10 @@ task policy-engineering
 task demo USER=alice@example.com
 ```
 
-Alice's tool list contains only `list_resources`, proving that the vMCP filter
-has hidden MKP's other tools. Her `engineering` group membership allows the
-call.
+Alice's tool list contains exactly `list_resources`, `add_issue_comment`, and
+`issue_write`, proving that the vMCP filters have hidden every other backend
+tool. Her `engineering` group membership allows the call. The demo script calls
+only the read-only MKP tool, so it does not modify GitHub during the talk.
 
 Now authenticate as Bob:
 
@@ -219,6 +267,9 @@ Delete only this named Kind cluster, then remove its saved kubeconfig:
 kind delete cluster --name toolhive-cedar-demo
 rm -f .state/kubeconfig
 ```
+
+The GitHub token remains in `.state/github-token` for another rehearsal. Remove
+that file separately when you no longer need it.
 
 ## Recovery commands
 

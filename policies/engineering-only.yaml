@@ -8,5 +8,7 @@ spec:
   config:
     policies:
       - 'permit(principal in THVGroup::"engineering", action == Action::"call_tool", resource == Tool::"list_resources");'
+      - 'permit(principal in THVGroup::"engineering", action == Action::"call_tool", resource == Tool::"add_issue_comment");'
+      - 'permit(principal in THVGroup::"engineering", action == Action::"call_tool", resource == Tool::"issue_write");'
     entities_json: '[]'
     group_claim_name: groups
