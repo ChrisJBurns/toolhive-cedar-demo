@@ -29,7 +29,7 @@ The demo uses these pinned versions:
 
 - ToolHive operator and CRD charts: `0.51.0`
 - Dex: `v2.45.1`
-- GoFetch: `1.0.5`
+- MKP: `v0.4.3`
 
 ## 1. Create the Kubernetes cluster
 
@@ -120,25 +120,26 @@ Dex has two static demo identities. Both use the password `password`:
 | `alice@example.com` | `toolhive-users`, `engineering` |
 | `bob@example.com` | `toolhive-users`, `finance` |
 
-The shared `toolhive-users` group is what the first Cedar policy will permit.
+Both identities share `toolhive-users`, but that group deliberately receives no
+permission. Only Alice's `engineering` membership permits the tool call.
 
 ## 5. Apply the Cedar policy
 
 Show the policy before applying it:
 
 ```bash
-cat policies/all-dex-users.yaml
-kubectl apply -f policies/all-dex-users.yaml
+cat policies/engineering-only.yaml
+kubectl apply -f policies/engineering-only.yaml
 ```
 
-Its Cedar statement permits principals in the `toolhive-users` group to invoke
-only the GoFetch `fetch` tool:
+Its Cedar statement permits only principals in `engineering` to invoke MKP's
+`list_resources` tool. Cedar denies every request that has no matching permit:
 
 ```cedar
 permit(
-  principal in THVGroup::"toolhive-users",
+  principal in THVGroup::"engineering",
   action == Action::"call_tool",
-  resource == Tool::"fetch"
+  resource == Tool::"list_resources"
 );
 ```
 
@@ -151,12 +152,16 @@ cat manifests/20-toolhive.yaml
 kubectl apply -f manifests/20-toolhive.yaml
 ```
 
-That manifest creates four things:
+That manifest creates the following pieces:
 
 1. An `MCPOIDCConfig` that trusts Dex.
-2. An `MCPGroup` for the demo backends.
-3. An `MCPServer` running the GoFetch image.
-4. A `VirtualMCPServer` that aggregates the group and enforces OIDC and Cedar.
+2. A service account with Kubernetes's read-only `view` role.
+3. An `MCPGroup` for the demo backends.
+4. An `MCPServer` running MKP in read-only mode.
+5. A `VirtualMCPServer` that aggregates MKP and enforces OIDC and Cedar.
+
+MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
+only that tool, hiding MKP's other tool, `get_resource`.
 
 Wait for each resource so any startup problem is obvious:
 
@@ -164,9 +169,9 @@ Wait for each resource so any startup problem is obvious:
 kubectl -n toolhive-demo wait \
   --for=condition=Valid mcpoidcconfig/dex --timeout=2m
 kubectl -n toolhive-demo wait \
-  --for=condition=Valid mcpauthzconfig/fetch-access --timeout=2m
+  --for=condition=Valid mcpauthzconfig/resources-access --timeout=2m
 kubectl -n toolhive-demo wait \
-  --for=jsonpath='{.status.phase}'=Ready mcpserver/gofetch --timeout=5m
+  --for=jsonpath='{.status.phase}'=Ready mcpserver/mkp --timeout=5m
 kubectl -n toolhive-demo wait \
   --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
 kubectl -n toolhive-demo wait \
@@ -179,45 +184,32 @@ Finally, show what the operator created:
 task status
 ```
 
-## 7. Demonstrate authorization
+## 7. Demonstrate filtering and authorization
 
-Both users belong to `toolhive-users`, so both can discover and invoke `fetch`:
-
-```bash
-task demo USER=alice@example.com
-task demo USER=bob@example.com
-```
-
-Now restrict access to the `engineering` group:
+First show the active Cedar policy, then authenticate as Alice:
 
 ```bash
 cat policies/engineering-only.yaml
 task policy-engineering
 task demo USER=alice@example.com
+```
+
+Alice's tool list contains only `list_resources`, proving that the vMCP filter
+has hidden MKP's other tools. Her `engineering` group membership allows the
+call.
+
+Now authenticate as Bob:
+
+```bash
 task demo USER=bob@example.com
 ```
 
-Alice is allowed. Bob sees an empty tool list and gets HTTP 403 when he tries to
-call `fetch`.
-
-Next, authorize a specific identity instead of a group:
-
-```bash
-cat policies/alice-only.yaml
-task policy-alice
-task demo USER=alice@example.com
-task demo USER=bob@example.com
-```
-
-Restore the all-Dex-users policy when you finish:
-
-```bash
-task policy-all
-```
+Bob belongs to `toolhive-users` but not `engineering`. He sees an empty tool
+list, and Cedar returns HTTP 403 when he attempts `list_resources`.
 
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
-and waiting for policy reconciliation. The cluster and every installed resource
-remain explicit steps above because those are part of the story you are telling.
+and policy reconciliation. The cluster and every installed resource remain
+explicit steps above because those are part of the story you are telling.
 
 ## Cleanup
 

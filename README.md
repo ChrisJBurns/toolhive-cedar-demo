@@ -4,12 +4,12 @@ This standalone conference demo creates a disposable Kind cluster containing:
 
 - ToolHive Operator and CRDs installed from the official OCI Helm charts
 - Dex with two local users and group claims
-- GoFetch as the MCP backend
+- MKP as a read-only Kubernetes MCP backend
 - A Virtual MCP server protected by OIDC and Cedar
 
-The default Cedar policy permits the `fetch` tool to members of
-`THVGroup::"toolhive-users"`. Every user configured in this Dex instance belongs
-to that group.
+The vMCP exposes only MKP's `list_resources` tool. The Cedar policy permits that
+tool for `THVGroup::"engineering"`; membership of the broader
+`toolhive-users` group grants no access.
 
 ## Pinned releases
 
@@ -20,7 +20,7 @@ These were the latest releases when this repository was prepared on
 | --- | --- |
 | ToolHive operator and CRD charts | `0.51.0` |
 | Dex | `v2.45.1` |
-| GoFetch | `v1.0.5` |
+| MKP | `v0.4.3` |
 
 The versions are pinned so the talk remains reproducible. Update
 `TOOLHIVE_VERSION` in `Taskfile.yml` and the image tags in `manifests/` when you
@@ -44,6 +44,8 @@ task demo USER=bob@example.com
 ToolHive charts from GHCR, applies all demo resources, and waits for them to
 become ready.
 
+For the command-by-command stage setup, follow [DEMO.md](DEMO.md).
+
 Both users have the password `password`:
 
 | User | Dex groups |
@@ -52,37 +54,33 @@ Both users have the password `password`:
 | `bob@example.com` | `toolhive-users`, `finance` |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
-MCP session, lists the Cedar-filtered tools, and calls `fetch` against
-`https://example.com`.
+MCP session, lists the filtered tools, and calls `list_resources` for pods in
+the demo namespace.
 
 ## Talk sequence
 
-Start with the default shared-group policy. Both users are allowed:
-
-```bash
-task policy-all
-task demo USER=alice@example.com
-task demo USER=bob@example.com
-```
-
-Restrict access to the engineering group. Alice remains allowed; Bob sees an
-empty tool list and receives an HTTP 403 when attempting the call:
+Apply the engineering-only policy to restore the intended state at any time:
 
 ```bash
 task policy-engineering
-task demo USER=alice@example.com
-task demo USER=bob@example.com
 ```
 
-Then demonstrate a user-attribute rule:
+Alice belongs to both `toolhive-users` and `engineering`. She sees only
+`list_resources` and can call it:
 
 ```bash
-task policy-alice
 task demo USER=alice@example.com
+```
+
+Bob belongs to `toolhive-users` but not `engineering`. Cedar removes the tool
+from his list and returns HTTP 403 when he attempts the call:
+
+```bash
 task demo USER=bob@example.com
 ```
 
-Restore the requested all-Dex-users state with `task policy-all`.
+MKP also provides `get_resource`, but the vMCP allow-list hides it. This keeps
+tool filtering separate from Cedar's identity-based authorization decision.
 
 ## Connect another MCP client
 
@@ -110,6 +108,7 @@ task ready     # Wait for every resource
 task down      # Delete the demo-owned Kind cluster
 ```
 
-This is deliberately a local-only demo. It enables HTTP OIDC, the OAuth password
-grant, static users, and a known client secret for deterministic conference use.
-Do not reuse these settings in production.
+This is deliberately a local-only demo. It grants MKP the cluster-wide built-in
+`view` role and enables HTTP OIDC, the OAuth password grant, static users, and a
+known client secret for deterministic conference use. Do not reuse these
+settings in production.

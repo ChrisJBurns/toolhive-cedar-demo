@@ -13,6 +13,25 @@ spec:
     jwksAllowPrivateIP: true
     protectedResourceAllowPrivateIP: true
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mkp
+  namespace: toolhive-demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: toolhive-demo-mkp-view
+subjects:
+  - kind: ServiceAccount
+    name: mkp
+    namespace: toolhive-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+---
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPGroup
 metadata:
@@ -24,15 +43,18 @@ spec:
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
-  name: gofetch
+  name: mkp
   namespace: toolhive-demo
 spec:
   groupRef:
     name: demo-backends
-  image: ghcr.io/stackloklabs/gofetch/server:1.0.5
+  image: ghcr.io/stackloklabs/mkp/server:0.4.3
   transport: streamable-http
   proxyPort: 8080
   mcpPort: 8080
+  args:
+    - --read-write=false
+  serviceAccount: mkp
   resources:
     requests:
       cpu: 50m
@@ -52,9 +74,14 @@ spec:
   config:
     aggregation:
       conflictResolution: priority
+      defaultToolVisibility: deny
       conflictResolutionConfig:
         priorityOrder:
-          - gofetch
+          - mkp
+      tools:
+        - workload: mkp
+          filter:
+            - list_resources
   incomingAuth:
     type: oidc
     oidcConfigRef:
@@ -67,6 +94,6 @@ spec:
         - groups
       resourceUrl: http://127.0.0.1:4483/mcp
     authzConfigRef:
-      name: fetch-access
+      name: resources-access
   outgoingAuth:
     source: discovered

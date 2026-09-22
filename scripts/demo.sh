@@ -99,7 +99,7 @@ curl --silent --show-error \
 pretty_print "${tmp_dir}/tools.json"
 
 echo
-echo "Calling fetch for https://example.com..."
+echo "Calling list_resources for pods in toolhive-demo..."
 http_status="$(curl --silent --show-error \
   --connect-timeout 2 --max-time 30 \
   --output "${tmp_dir}/call.json" \
@@ -109,7 +109,7 @@ http_status="$(curl --silent --show-error \
   --header 'MCP-Protocol-Version: 2025-06-18' \
   --header 'Accept: application/json, text/event-stream' \
   --header 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fetch","arguments":{"url":"https://example.com"}}}' \
+  --data '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_resources","arguments":{"resource_type":"namespaced","group":"","version":"v1","resource":"pods","namespace":"toolhive-demo","include_annotations":false,"limit":10}}}' \
   "${endpoint}")"
 pretty_print "${tmp_dir}/call.json"
 
