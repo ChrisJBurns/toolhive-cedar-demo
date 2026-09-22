@@ -104,22 +104,6 @@ helm -n toolhive-system list
 
 ## 4. Load the GitHub token and install Dex
 
-If this is a new terminal, point `kubectl` at the demo cluster again and verify
-that it can reach the cluster:
-
-```bash
-export KUBECONFIG="$PWD/.state/kubeconfig"
-kubectl get namespaces
-```
-
-If `kubectl` tries to connect to `localhost:8080`, the `KUBECONFIG` export is
-missing or `.state/kubeconfig` has not been created. Recreate it if necessary:
-
-```bash
-kind get kubeconfig --name toolhive-cedar-demo > .state/kubeconfig
-export KUBECONFIG="$PWD/.state/kubeconfig"
-```
-
 Create an isolated namespace:
 
 ```bash
