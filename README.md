@@ -46,7 +46,7 @@ audience can see each part of the system being assembled.
 The token file is gitignored. To use a file elsewhere, override its location:
 
 ```bash
-task create-github-token GITHUB_TOKEN_FILE=/secure/path/github-token
+task clean-and-create-github-token-secret GITHUB_TOKEN_FILE=/secure/path/github-token
 ```
 
 Use a fine-grained token with repository access and read/write Issues

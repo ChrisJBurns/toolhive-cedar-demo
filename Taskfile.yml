@@ -17,7 +17,7 @@ tasks:
     cmds:
       - task --list
 
-  create-github-token:
+  clean-and-create-github-token-secret:
     desc: Clean and securely load the GitHub token file
     preconditions:
       - sh: test -s "{{.GITHUB_TOKEN_FILE}}"
@@ -46,6 +46,7 @@ tasks:
         msg: "{{.GITHUB_TOKEN_FILE}} must not end with a newline"
     cmds:
       - |
+        echo "Creating Github Token Secret from file.."
         kubectl -n {{.NAMESPACE}} create secret generic github-token \
           --from-file=token="{{.GITHUB_TOKEN_FILE}}" \
           --dry-run=client \

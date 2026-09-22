@@ -121,7 +121,7 @@ The Task helper strips carriage returns and newlines, restricts access to the
 file, and creates the `github-token` Kubernetes Secret:
 
 ```bash
-task create-github-token
+task clean-and-create-github-token-secret
 ```
 
 The Secret is injected into the GitHub MCP server as
