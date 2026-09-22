@@ -115,9 +115,7 @@ newline. Give it repository access and read/write Issues permission. The
 `.state` directory is gitignored. One terminal-safe way to create it is:
 
 ```bash
-read -rsp "GitHub token: " github_token; echo
-printf '%s' "$github_token" > .state/github-token
-unset github_token
+bash -c 'read -rsp "GitHub token: " github_token; echo; printf "%s" "$github_token" > .state/github-token'
 chmod 600 .state/github-token
 ```
 
