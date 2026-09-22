@@ -134,17 +134,11 @@ Using an editor avoids shell-specific `read` options:
 vim .state/github-token
 ```
 
-After saving the file, remove every carriage return and newline. This works in
-common POSIX-style shells, including Bash, zsh, and Dash, and handles both Unix
-and Windows line endings:
+After saving the file, use the Task helper to remove carriage returns and
+newlines and restrict access to the file:
 
 ```bash
-umask 077
-github_token=$(tr -d '\r\n' < .state/github-token)
-printf '%s' "$github_token" > .state/github-token
-unset github_token
-chmod 600 .state/github-token
-test -s .state/github-token
+task format-github-token
 ```
 
 Create a Kubernetes Secret directly from that file:

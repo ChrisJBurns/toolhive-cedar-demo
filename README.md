@@ -39,11 +39,7 @@ git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
 mkdir -p .state
 vim .state/github-token
-umask 077
-github_token=$(tr -d '\r\n' < .state/github-token)
-printf '%s' "$github_token" > .state/github-token
-unset github_token
-chmod 600 .state/github-token
+task format-github-token
 task up
 task demo USER=alice@example.com
 task demo USER=bob@example.com

@@ -98,6 +98,19 @@ tasks:
       - task: install
       - echo "Demo ready. Run 'task demo USER=alice@example.com'."
 
+  format-github-token:
+    desc: Remove newline characters and restrict access to the GitHub token file
+    preconditions:
+      - sh: test -s "{{.GITHUB_TOKEN_FILE}}"
+        msg: "Create {{.GITHUB_TOKEN_FILE}} containing a GitHub token"
+    cmds:
+      - |
+        chmod 600 "{{.GITHUB_TOKEN_FILE}}"
+        github_token=$(tr -d '\r\n' < "{{.GITHUB_TOKEN_FILE}}")
+        printf '%s' "$github_token" > "{{.GITHUB_TOKEN_FILE}}"
+        unset github_token
+        test -s "{{.GITHUB_TOKEN_FILE}}"
+
   github-secret:
     desc: Load the GitHub token file into Kubernetes
     preconditions:
