@@ -104,25 +104,51 @@ helm -n toolhive-system list
 
 ## 4. Load the GitHub token and install Dex
 
+If this is a new terminal, point `kubectl` at the demo cluster again and verify
+that it can reach the cluster:
+
+```bash
+export KUBECONFIG="$PWD/.state/kubeconfig"
+kubectl get namespaces
+```
+
+If `kubectl` tries to connect to `localhost:8080`, the `KUBECONFIG` export is
+missing or `.state/kubeconfig` has not been created. Recreate it if necessary:
+
+```bash
+kind get kubeconfig --name toolhive-cedar-demo > .state/kubeconfig
+export KUBECONFIG="$PWD/.state/kubeconfig"
+```
+
 Create an isolated namespace:
 
 ```bash
 kubectl apply -f manifests/00-namespace.yaml
 ```
 
-Put a fine-grained GitHub token in `.state/github-token` with no trailing
-newline. Give it repository access and read/write Issues permission. The
-`.state` directory is gitignored. One terminal-safe way to create it is:
+Put a fine-grained GitHub token in `.state/github-token`. Give it repository
+access and read/write Issues permission. The `.state` directory is gitignored.
+Using an editor avoids shell-specific `read` options:
 
 ```bash
-bash -c 'read -rsp "GitHub token: " github_token; echo; printf "%s" "$github_token" > .state/github-token'
+vim .state/github-token
+```
+
+After saving the file, remove every carriage return and newline. This works in
+common POSIX-style shells, including Bash, zsh, and Dash, and handles both Unix
+and Windows line endings:
+
+```bash
+umask 077
+tr -d '\r\n' < .state/github-token > .state/github-token.tmp
+mv .state/github-token.tmp .state/github-token
 chmod 600 .state/github-token
+test -s .state/github-token
 ```
 
 Create a Kubernetes Secret directly from that file:
 
 ```bash
-test -s .state/github-token
 kubectl -n toolhive-demo create secret generic github-token \
   --from-file=token=.state/github-token \
   --dry-run=client \

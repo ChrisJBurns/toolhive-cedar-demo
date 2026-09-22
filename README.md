@@ -38,7 +38,10 @@ curl 7.76 or newer, and `jq`.
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
 mkdir -p .state
-bash -c 'read -rsp "GitHub token: " github_token; echo; printf "%s" "$github_token" > .state/github-token'
+vim .state/github-token
+umask 077
+tr -d '\r\n' < .state/github-token > .state/github-token.tmp
+mv .state/github-token.tmp .state/github-token
 chmod 600 .state/github-token
 task up
 task demo USER=alice@example.com
