@@ -9,8 +9,10 @@ This standalone conference demo creates a disposable Kind cluster containing:
 - A Virtual MCP server protected by OIDC and Cedar
 
 The vMCP exposes MKP's `list_resources` tool plus GitHub's
-`add_issue_comment` and `issue_write` tools. The Cedar policy permits those
-tools for `THVGroup::"engineering"`. Users outside that group have no access.
+`add_issue_comment` and `issue_write` tools. Cedar grants the MKP tool to
+`THVGroup::"cluster-view"` and the GitHub tools to
+`THVGroup::"engineering"`. Alice belongs to both groups, creating an indirect
+Kubernetes-to-GitHub exfiltration path.
 
 ## Pinned releases
 
@@ -57,7 +59,7 @@ Both users have the password `password`:
 
 | User | Dex groups |
 | --- | --- |
-| `alice@example.com` | `engineering` |
+| `alice@example.com` | `cluster-view`, `engineering` |
 | `bob@example.com` | None |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
@@ -66,22 +68,29 @@ the demo namespace.
 
 ## Talk sequence
 
-Apply the engineering-only policy to restore the intended state at any time:
+Start with no tool access:
 
 ```bash
-task policy-engineering
+task policy-deny-all
 ```
 
-Alice belongs to `engineering`. She sees exactly `list_resources`,
-`add_issue_comment`, and `issue_write`. The demo safely calls only
-`list_resources`:
+Then build Alice's effective permissions in two stages:
 
 ```bash
+task policy-cluster-view
+task demo USER=alice@example.com
+
+task policy-combined-access
 task demo USER=alice@example.com
 ```
 
+Policy 1 grants `list_resources` through `cluster-view`. Policy 2 retains that
+permission and grants `add_issue_comment` and `issue_write` through
+`engineering`. The resulting combination enables the exfiltration demonstrated
+in `DEMO.md`.
+
 Bob has no group membership. Cedar removes every tool from his list and returns
-HTTP 403 when he attempts the call:
+HTTP 403 when he attempts the read:
 
 ```bash
 task demo USER=bob@example.com

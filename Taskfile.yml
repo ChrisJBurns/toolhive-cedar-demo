@@ -82,12 +82,26 @@ tasks:
     cmds:
       - scripts/demo.sh "{{.USER}}"
 
-  policy-engineering:
-    desc: Allow engineering to call the exposed tools
+  policy-deny-all:
+    desc: Deny every exposed tool
     cmds:
       - task: apply-policy
         vars:
-          POLICY_FILE: policies/engineering-only.yaml
+          POLICY_FILE: policies/00-deny-all.yaml
+
+  policy-cluster-view:
+    desc: Allow cluster-view to read Kubernetes resources
+    cmds:
+      - task: apply-policy
+        vars:
+          POLICY_FILE: policies/10-cluster-view.yaml
+
+  policy-combined-access:
+    desc: Add GitHub write access for engineering
+    cmds:
+      - task: apply-policy
+        vars:
+          POLICY_FILE: policies/20-combined-access.yaml
 
   apply-policy:
     internal: true

@@ -139,40 +139,26 @@ Dex has two static demo identities. Both use the password `password`:
 
 | User | Groups |
 | --- | --- |
-| `alice@example.com` | `engineering` |
+| `alice@example.com` | `cluster-view`, `engineering` |
 | `bob@example.com` | None |
 
-Alice's `engineering` membership permits the tool calls. Bob has no group
-membership, so Cedar denies him access.
+Alice carries both group claims, but group membership alone grants nothing.
+Cedar decides which capability each group receives. Bob has no group membership.
 
-## 5. Apply the Cedar policy
+## 5. Establish the deny-by-default baseline
 
-Show the policy before applying it:
+Start with an explicit deny-all policy so the vMCP can be created before either
+of Alice's groups has permission to use a tool:
 
 ```bash
-cat policies/engineering-only.yaml
-kubectl apply -f policies/engineering-only.yaml
+cat policies/00-deny-all.yaml
+kubectl apply -f policies/00-deny-all.yaml
 ```
 
-Its Cedar statements permit only principals in `engineering` to invoke the
-three exposed tools. Cedar denies every request that has no matching permit:
+The baseline contains no permits:
 
 ```cedar
-permit(
-  principal in THVGroup::"engineering",
-  action == Action::"call_tool",
-  resource == Tool::"list_resources"
-);
-permit(
-  principal in THVGroup::"engineering",
-  action == Action::"call_tool",
-  resource == Tool::"add_issue_comment"
-);
-permit(
-  principal in THVGroup::"engineering",
-  action == Action::"call_tool",
-  resource == Tool::"issue_write"
-);
+forbid(principal, action == Action::"call_tool", resource);
 ```
 
 ## 6. Create the MCP resources
@@ -216,28 +202,58 @@ Finally, show what the operator created:
 task status
 ```
 
-## 7. Demonstrate filtering and authorization
+## 7. Build Alice's effective permissions
 
-First show the active Cedar policy, then authenticate as Alice:
+First authenticate as Alice while the deny-all policy is active:
 
 ```bash
-cat policies/engineering-only.yaml
 task demo USER=alice@example.com
 ```
 
-Alice's tool list contains exactly `list_resources`, `add_issue_comment`, and
-`issue_write`, proving that the vMCP filters have hidden every other backend
-tool. Her `engineering` group membership allows the call. The demo script calls
-only the read-only MKP tool, so it does not modify GitHub during the talk.
+Despite carrying both group claims, Alice sees an empty tool list and Cedar
+denies the attempted `list_resources` call.
 
-Now authenticate as Bob:
+Now apply policy 1, which gives `cluster-view` access to the MKP read tool:
+
+```bash
+cat policies/10-cluster-view.yaml
+task policy-cluster-view
+task demo USER=alice@example.com
+```
+
+Alice now sees only `list_resources`, and the Kubernetes read succeeds. Her
+`engineering` membership still grants nothing.
+
+Apply policy 2. It retains policy 1 and gives `engineering` access to the two
+GitHub write tools:
+
+```bash
+cat policies/20-combined-access.yaml
+task policy-combined-access
+task demo USER=alice@example.com
+```
+
+Alice now sees exactly `list_resources`, `add_issue_comment`, and `issue_write`.
+Neither group appears dangerous in isolation, but Alice's effective permissions
+now contain both a private-data source and an external write destination.
+
+At this point, query Alice in the Cedar analysis tool. It should show the
+indirect relationship:
+
+```text
+cluster-view -> list_resources -> Kubernetes data
+engineering  -> add_issue_comment / issue_write -> GitHub
+Alice         -> both groups -> Kubernetes-to-GitHub exfiltration path
+```
+
+Bob remains a useful negative control:
 
 ```bash
 task demo USER=bob@example.com
 ```
 
-Bob has no group membership. He sees an empty tool list, and Cedar returns HTTP
-403 when he attempts `list_resources`.
+Bob has no group membership, so he still sees an empty tool list and receives
+HTTP 403 when he attempts `list_resources`.
 
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
 and policy reconciliation. The cluster and every installed resource remain
