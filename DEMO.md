@@ -135,15 +135,14 @@ kubectl apply -f manifests/10-dex.yaml
 kubectl -n toolhive-demo rollout status deployment/dex --timeout=3m
 ```
 
-Dex has two static demo identities. Both use the password `password`:
+Dex has one static demo identity. Alice uses the password `password`:
 
 | User | Groups |
 | --- | --- |
 | `alice@example.com` | `cluster-view`, `engineering` |
-| `bob@example.com` | None |
 
 Alice carries both group claims, but group membership alone grants nothing.
-Cedar decides which capability each group receives. Bob has no group membership.
+Cedar decides which capability each group receives.
 
 ## 5. Establish the deny-by-default baseline
 
@@ -245,15 +244,6 @@ cluster-view -> list_resources -> Kubernetes data
 engineering  -> add_issue_comment / issue_write -> GitHub
 Alice         -> both groups -> Kubernetes-to-GitHub exfiltration path
 ```
-
-Bob remains a useful negative control:
-
-```bash
-task demo USER=bob@example.com
-```
-
-Bob has no group membership, so he still sees an empty tool list and receives
-HTTP 403 when he attempts `list_resources`.
 
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
 and policy reconciliation. The cluster and every installed resource remain

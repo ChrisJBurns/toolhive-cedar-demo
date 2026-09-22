@@ -3,7 +3,7 @@
 This standalone conference demo creates a disposable Kind cluster containing:
 
 - ToolHive Operator and CRDs installed from the official OCI Helm charts
-- Dex with two local users and group claims
+- Dex with one local user and group claims
 - MKP as a read-only Kubernetes MCP backend
 - The official GitHub MCP server with its token loaded from a local file
 - A Virtual MCP server protected by OIDC and Cedar
@@ -55,12 +55,11 @@ Use a fine-grained token with repository access and read/write Issues
 permission. ToolHive creates the `github-token` Kubernetes Secret from the file
 and injects it into the GitHub MCP server; the token never enters a manifest.
 
-Both users have the password `password`:
+Alice uses the password `password`:
 
 | User | Dex groups |
 | --- | --- |
 | `alice@example.com` | `cluster-view`, `engineering` |
-| `bob@example.com` | None |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
 MCP session, lists the filtered tools, and calls `list_resources` for pods in
@@ -88,13 +87,6 @@ Policy 1 grants `list_resources` through `cluster-view`. Policy 2 retains that
 permission and grants `add_issue_comment` and `issue_write` through
 `engineering`. The resulting combination enables the exfiltration demonstrated
 in `DEMO.md`.
-
-Bob has no group membership. Cedar removes every tool from his list and returns
-HTTP 403 when he attempts the read:
-
-```bash
-task demo USER=bob@example.com
-```
 
 MKP's `get_resource` and the GitHub server's other tools are hidden by the vMCP
 allow-list. This keeps tool filtering separate from Cedar's identity-based
