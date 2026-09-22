@@ -1,5 +1,7 @@
 version: "3"
 
+silent: true
+
 vars:
   TOOLHIVE_VERSION: "0.51.0"
   CLUSTER_NAME: toolhive-cedar-demo
