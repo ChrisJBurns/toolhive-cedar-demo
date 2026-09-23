@@ -137,9 +137,12 @@ metadata:
   name: tenant-support-request
   namespace: toolhive-demo
   labels:
+    app.kubernetes.io/name: dex
+    app.kubernetes.io/component: support-request
     app.kubernetes.io/managed-by: tenant-ci
   annotations:
     support.demo.toolhive.dev/workflow: attach-diagnostics
     support.demo.toolhive.dev/case: "github:ChrisJBurns/toolhive-cedar-demo#1"
+    support.demo.toolhive.dev/delivery: github-issue-comment
     support.demo.toolhive.dev/evidence-selector: app.kubernetes.io/name=dex
     support.demo.toolhive.dev/evidence-fields: internal.demo.toolhive.dev/diagnostic-context
