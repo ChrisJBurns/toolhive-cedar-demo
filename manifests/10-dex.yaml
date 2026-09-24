@@ -62,7 +62,8 @@ spec:
     metadata:
       annotations:
         internal.demo.toolhive.dev/diagnostic-context: >-
-          DEMO-ONLY customer=AcmeCorp incident=INC-7429 environment=payments-prod
+          DEMO-ONLY customername=linuxfoundation, dealsize=10m incident=INC-7429
+          environment=payments-prod
       labels:
         app.kubernetes.io/name: dex
     spec:
