@@ -11,7 +11,7 @@ This standalone conference demo creates a disposable Kind cluster containing:
 The vMCP exposes MKP's `list_resources` tool plus GitHub's
 `issue_read` and `add_issue_comment` tools. Cedar grants the MKP tool to
 `THVGroup::"engineering"` and the GitHub tools to
-`THVGroup::"support"`. Alice belongs to both groups, creating an indirect
+`THVGroup::"customer-support-agent"`. Alice belongs to both groups, creating an indirect
 Kubernetes-to-GitHub exfiltration path.
 
 ## Pinned releases
@@ -59,7 +59,7 @@ Alice uses the password `password`:
 
 | User | Dex groups |
 | --- | --- |
-| `alice@example.com` | `engineering`, `support` |
+| `alice@example.com` | `engineering`, `customer-support-agent` |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
 MCP session, lists the filtered tools, and calls `list_resources` for pods in
@@ -85,7 +85,7 @@ task demo USER=alice@example.com
 
 Policy 1 grants `list_resources` through `engineering`. Policy 2 retains that
 permission and grants `issue_read` and `add_issue_comment` through
-`support`. The resulting combination enables the exfiltration demonstrated
+`customer-support-agent`. The resulting combination enables the exfiltration demonstrated
 in `DEMO.md`.
 
 MKP's `get_resource` and the GitHub server's other tools are hidden by the vMCP

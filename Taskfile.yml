@@ -97,7 +97,7 @@ tasks:
           POLICY_FILE: policies/demo/10-engineering.yaml
 
   policy-combined-access:
-    desc: Add GitHub write access for support
+    desc: Add GitHub access for the customer support agent role
     cmds:
       - task: apply-policy
         vars:
