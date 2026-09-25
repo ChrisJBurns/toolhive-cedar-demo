@@ -9,9 +9,9 @@ This standalone conference demo creates a disposable Kind cluster containing:
 - A Virtual MCP server protected by OIDC and Cedar
 
 The vMCP exposes MKP's `list_resources` tool plus GitHub's
-`add_issue_comment` and `issue_write` tools. Cedar grants the MKP tool to
-`THVGroup::"cluster-view"` and the GitHub tools to
-`THVGroup::"engineering"`. Alice belongs to both groups, creating an indirect
+`issue_read` and `add_issue_comment` tools. Cedar grants the MKP tool to
+`THVGroup::"engineering"` and the GitHub tools to
+`THVGroup::"support"`. Alice belongs to both groups, creating an indirect
 Kubernetes-to-GitHub exfiltration path.
 
 ## Pinned releases
@@ -59,7 +59,7 @@ Alice uses the password `password`:
 
 | User | Dex groups |
 | --- | --- |
-| `alice@example.com` | `cluster-view`, `engineering` |
+| `alice@example.com` | `engineering`, `support` |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
 MCP session, lists the filtered tools, and calls `list_resources` for pods in
@@ -76,16 +76,16 @@ task policy-deny-all
 Then build Alice's effective permissions in two stages:
 
 ```bash
-task policy-cluster-view
+task policy-engineering
 task demo USER=alice@example.com
 
 task policy-combined-access
 task demo USER=alice@example.com
 ```
 
-Policy 1 grants `list_resources` through `cluster-view`. Policy 2 retains that
-permission and grants `add_issue_comment` and `issue_write` through
-`engineering`. The resulting combination enables the exfiltration demonstrated
+Policy 1 grants `list_resources` through `engineering`. Policy 2 retains that
+permission and grants `issue_read` and `add_issue_comment` through
+`support`. The resulting combination enables the exfiltration demonstrated
 in `DEMO.md`.
 
 MKP's `get_resource` and the GitHub server's other tools are hidden by the vMCP

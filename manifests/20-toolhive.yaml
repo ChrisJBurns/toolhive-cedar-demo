@@ -109,7 +109,7 @@ spec:
         - workload: github
           filter:
             - add_issue_comment
-            - issue_write
+            - issue_read
   incomingAuth:
     type: oidc
     oidcConfigRef:

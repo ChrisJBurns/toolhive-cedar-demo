@@ -139,7 +139,7 @@ Dex has one static demo identity. Alice uses the password `password`:
 
 | User | Groups |
 | --- | --- |
-| `alice@example.com` | `cluster-view`, `engineering` |
+| `alice@example.com` | `engineering`, `support` |
 
 Alice carries both group claims, but group membership alone grants nothing.
 Cedar decides which capability each group receives.
@@ -150,8 +150,8 @@ Start with an explicit deny-all policy so the vMCP can be created before either
 of Alice's groups has permission to use a tool:
 
 ```bash
-cat policies/00-deny-all.yaml
-kubectl apply -f policies/00-deny-all.yaml
+cat policies/demo/00-deny-all.yaml
+kubectl apply -f policies/demo/00-deny-all.yaml
 ```
 
 The baseline contains no permits:
@@ -182,7 +182,7 @@ That manifest creates the following pieces:
 
 MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
 only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
-GitHub's `add_issue_comment` and `issue_write` tools.
+GitHub's `issue_read` and `add_issue_comment` tools.
 
 Wait for each resource so any startup problem is obvious:
 
@@ -212,27 +212,27 @@ task demo USER=alice@example.com
 Despite carrying both group claims, Alice sees an empty tool list and Cedar
 denies the attempted `list_resources` call.
 
-Now apply policy 1, which gives `cluster-view` access to the MKP read tool:
+Now apply policy 1, which gives `engineering` access to the MKP read tool:
 
 ```bash
-cat policies/10-cluster-view.yaml
-task policy-cluster-view
+cat policies/demo/10-engineering.yaml
+task policy-engineering
 task demo USER=alice@example.com
 ```
 
 Alice now sees only `list_resources`, and the Kubernetes read succeeds. Her
-`engineering` membership still grants nothing.
+`support` membership still grants nothing.
 
-Apply policy 2. It retains policy 1 and gives `engineering` access to the two
-GitHub write tools:
+Apply policy 2. It retains policy 1 and gives `support` access to the two
+GitHub tools:
 
 ```bash
-cat policies/20-combined-access.yaml
+cat policies/demo/20-combined-access.yaml
 task policy-combined-access
 task demo USER=alice@example.com
 ```
 
-Alice now sees exactly `list_resources`, `add_issue_comment`, and `issue_write`.
+Alice now sees exactly `list_resources`, `issue_read`, and `add_issue_comment`.
 Neither group appears dangerous in isolation, but Alice's effective permissions
 now contain both a private-data source and an external write destination.
 
@@ -240,9 +240,9 @@ At this point, query Alice in the Cedar analysis tool. It should show the
 indirect relationship:
 
 ```text
-cluster-view -> list_resources -> Kubernetes data
-engineering  -> add_issue_comment / issue_write -> GitHub
-Alice         -> both groups -> Kubernetes-to-GitHub exfiltration path
+engineering -> list_resources -> Kubernetes data
+support     -> add_issue_comment -> GitHub
+Alice        -> both groups -> Kubernetes-to-GitHub exfiltration path
 ```
 
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
@@ -288,7 +288,7 @@ claude
 ```
 
 Inside Claude Code, run `/mcp` to inspect the connection. Alice should see
-`list_resources`, `add_issue_comment`, and `issue_write` through the one
+`list_resources`, `issue_read`, and `add_issue_comment` through the one
 `toolhive-demo` server.
 
 ## 9. Exfiltration

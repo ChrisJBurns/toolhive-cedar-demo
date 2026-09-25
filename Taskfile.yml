@@ -87,21 +87,21 @@ tasks:
     cmds:
       - task: apply-policy
         vars:
-          POLICY_FILE: policies/00-deny-all.yaml
+          POLICY_FILE: policies/demo/00-deny-all.yaml
 
-  policy-cluster-view:
-    desc: Allow cluster-view to read Kubernetes resources
+  policy-engineering:
+    desc: Allow engineering to read Kubernetes resources
     cmds:
       - task: apply-policy
         vars:
-          POLICY_FILE: policies/10-cluster-view.yaml
+          POLICY_FILE: policies/demo/10-engineering.yaml
 
   policy-combined-access:
-    desc: Add GitHub write access for engineering
+    desc: Add GitHub write access for support
     cmds:
       - task: apply-policy
         vars:
-          POLICY_FILE: policies/20-combined-access.yaml
+          POLICY_FILE: policies/demo/20-combined-access.yaml
 
   apply-policy:
     internal: true
