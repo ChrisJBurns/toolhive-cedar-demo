@@ -148,6 +148,11 @@ tasks:
     cmds:
       - scripts/demo.sh "{{.USER}}"
 
+  analyze-exfiltration:
+    desc: Find compound data-exfiltration paths with Cedar Woodpecker
+    cmds:
+      - scripts/analyze-exfiltration.sh
+
   policy-deny-all:
     desc: Deny every exposed tool
     cmds:

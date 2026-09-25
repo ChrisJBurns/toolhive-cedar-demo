@@ -15,10 +15,17 @@ The vMCP exposes MKP's `list_resources` tool plus GitHub's
 `THVGroup::"support"`. Alice belongs to both groups, creating an indirect
 Kubernetes-to-GitHub exfiltration path.
 
+The repository includes a Cedar Woodpecker analysis that models internal-data
+readers and public-internet writers as two maintained lists. Their Cartesian
+product synthesizes the implicit `exfiltrate_data` permission and reports one
+sound authorization-composition path under the modeled transition
+assumptions. See
+[`analysis/README.md`](analysis/README.md).
+
 ## Pinned releases
 
-These were the latest releases when this repository was prepared on
-22 September 2026:
+These versions were pinned when this repository was prepared on 24 September
+2026:
 
 | Component | Version |
 | --- | --- |
@@ -26,6 +33,8 @@ These were the latest releases when this repository was prepared on
 | Dex | `v2.45.1` |
 | MKP | `v0.4.3` |
 | GitHub MCP Server | `v1.12.2` |
+| Cedar Woodpecker | `7015a6fa38b4d48a748443d1aa85f5b741f51200` |
+| cvc5 | `1.3.1` |
 
 The versions are pinned so the talk remains reproducible. Update the chart
 versions in `DEMO.md` and the image tags in `manifests/` when you intentionally
@@ -35,7 +44,9 @@ want to move to newer releases.
 
 Supported hosts are macOS, Linux, and WSL2. Prerequisites: Docker,
 [Task](https://taskfile.dev/), Bash, `kind`, `kubectl`, Helm 3.10 or newer,
-curl 7.76 or newer, and `jq`.
+curl 7.76 or newer, and `jq`. The optional compound-permission analysis also
+requires Rust 1.89 or newer, Cedar Woodpecker, and cvc5 1.3.1; `DEMO.md`
+contains pinned installation commands.
 
 ```bash
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
@@ -116,6 +127,7 @@ task versions  # Installed charts and container images
 task github-secret GITHUB_TOKEN_FILE=/secure/path/github-token  # Rotate token
 task logs      # Operator, vMCP, and Dex logs
 task ready     # Wait for every resource
+task analyze-exfiltration  # Find the compound exfiltration path
 task cleanup   # Delete the demo Kind cluster and saved kubeconfig
 ```
 

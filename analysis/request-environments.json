@@ -1,0 +1,25 @@
+{
+  "internal_data_readers": [
+    {
+      "name": "list_resources",
+      "principal": "Client",
+      "action": "Action::\"call_tool\"",
+      "resource_type": "Tool",
+      "resource": "Tool::\"list_resources\""
+    }
+  ],
+  "public_internet_writers": [
+    {
+      "name": "add_issue_comment",
+      "principal": "Client",
+      "action": "Action::\"call_tool\"",
+      "resource_type": "Tool",
+      "resource": "Tool::\"add_issue_comment\""
+    }
+  ],
+  "target": {
+    "action": "Action::\"exfiltrate_data\"",
+    "resource_type": "Exfiltration",
+    "resource": "Exfiltration::\"public_internet\""
+  }
+}

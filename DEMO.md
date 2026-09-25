@@ -16,6 +16,7 @@ helm version
 task --version
 curl --version
 jq --version
+cargo --version
 ```
 
 Clone the repository and enter it:
@@ -25,12 +26,40 @@ git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
 ```
 
+Install the experimental Cedar Woodpecker CLI from the exact revision used by
+this demo. It requires Rust 1.89 or newer:
+
+```bash
+cargo install --locked \
+  --root "$PWD/.state" \
+  --git https://github.com/luxas/cedar-woodpecker.git \
+  --rev 7015a6fa38b4d48a748443d1aa85f5b741f51200 \
+  cedar-woodpecker
+```
+
+Cedar Woodpecker also requires cvc5. On an Apple Silicon Mac, install the
+pinned binary inside the repository:
+
+```bash
+mkdir -p .state/cvc5/bin
+curl -fsSL https://github.com/cvc5/cvc5/releases/download/cvc5-1.3.1/cvc5-macOS-arm64-static.zip -o .state/cvc5.zip
+printf '%s  %s\n' a0e7f5b03b1bc4284fbfff7cdfb08c704801701cf7ece83a13f8a505e7581215 .state/cvc5.zip | shasum -a 256 -c -
+unzip -oqj .state/cvc5.zip '*/bin/cvc5' -d .state/cvc5/bin
+chmod +x .state/cvc5/bin/cvc5
+.state/cvc5/bin/cvc5 --version
+.state/bin/cedar-woodpecker --version
+```
+
+Use the corresponding cvc5 1.3.1 archive for Intel macOS, Linux, or WSL2.
+
 The demo uses these pinned versions:
 
 - ToolHive operator and CRD charts: `0.51.0`
 - Dex: `v2.45.1`
 - MKP: `v0.4.3`
 - GitHub MCP Server: `v1.12.2`
+- Cedar Woodpecker: `7015a6fa38b4d48a748443d1aa85f5b741f51200`
+- cvc5: `1.3.1`
 
 ## 1. Create the Kubernetes cluster
 
@@ -236,20 +265,59 @@ Alice now sees exactly `list_resources`, `issue_read`, and `add_issue_comment`.
 Neither group appears dangerous in isolation, but Alice's effective permissions
 now contain both a private-data source and an external write destination.
 
-At this point, query Alice in the Cedar analysis tool. It should show the
-indirect relationship:
-
-```text
-engineering -> list_resources -> Kubernetes data
-support     -> add_issue_comment -> GitHub
-Alice       -> both groups -> Kubernetes-to-GitHub exfiltration path
-```
-
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
-and policy reconciliation. The cluster and every installed resource remain
+and policy reconciliation. The cluster, charts, and workload manifests remain
 explicit steps above because those are part of the story you are telling.
 
-## 8. Connect OpenCode
+## 8. Analyze the compound permissions
+
+The offline analysis uses the same three Cedar policies as the live ToolHive
+configuration. Inspect the ToolHive-compatible schema and the two source lists:
+
+```bash
+cat analysis/toolhive.cedarschema
+cat analysis/request-environments.json
+```
+
+There is currently one exact tool request classified as an internal-data read
+and one classified as a public-internet write. The Cartesian product therefore
+produces one transition function. Generate and inspect it:
+
+```bash
+scripts/generate-exfiltration-transitions.sh
+cat .state/exfiltration-transitions.json
+```
+
+Run Cedar Woodpecker with that generated transition set:
+
+```bash
+CVC5="$PWD/.state/cvc5/bin/cvc5" .state/bin/cedar-woodpecker escalate \
+  --schema analysis/toolhive.cedarschema \
+  --policies analysis/toolhive.cedar \
+  --transitions .state/exfiltration-transitions.json
+```
+
+For a concise, checked rehearsal of the same analysis, run this instead of the
+two commands above:
+
+```bash
+task analyze-exfiltration
+```
+
+The task first verifies that `analysis/toolhive.cedar` still exactly matches the
+combined live policy manifest. Under the modeled assumption that combining an
+internal read with a public write enables exfiltration, it then requires Cedar
+Woodpecker to return one sound path. The synthesized policy grants
+`Action::"exfiltrate_data"` only when the principal belongs to both groups:
+
+```text
+engineering -> list_resources -> internal Kubernetes data
+support     -> add_issue_comment -> public internet
+
+engineering x support -> 1 exfiltration path
+```
+
+## 9. Connect OpenCode
 
 OpenCode connects to the single vMCP endpoint, which routes requests to both
 MKP and GitHub. No ingress is required because OpenCode and Kind are running on
@@ -297,7 +365,7 @@ Alice should see `list_resources`, `issue_read`, and `add_issue_comment` through
 the one `toolhive-demo` server. Refresh `DEX_TOKEN` and restart OpenCode if the
 token expires.
 
-## 9. Exfiltration
+## 10. Exfiltration
 
 Give OpenCode the following prompt:
 
