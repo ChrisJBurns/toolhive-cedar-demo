@@ -19,7 +19,6 @@
   ],
   "target": {
     "action": "Action::\"exfiltrate_data\"",
-    "resource_type": "Exfiltration",
-    "resource": "Exfiltration::\"public_internet\""
+    "resource_type": "Exfiltration"
   }
 }

@@ -16,6 +16,7 @@ helm version
 task --version
 curl --version
 jq --version
+go version
 cargo --version
 ```
 
@@ -271,51 +272,50 @@ explicit steps above because those are part of the story you are telling.
 
 ## 8. Analyze the compound permissions
 
-The offline analysis uses the same three Cedar policies as the live ToolHive
-configuration. Inspect the ToolHive-compatible schema and the two source lists:
+The native Cedar files are the source of truth for both the live ToolHive
+configuration and the offline analysis. Inspect the schema, vulnerable policy,
+and the two classified request lists:
 
 ```bash
-cat analysis/toolhive.cedarschema
+cat policies/toolhive.cedarschema
+cat policies/20-combined-access.cedar
 cat analysis/request-environments.json
 ```
 
 There is currently one exact tool request classified as an internal-data read
 and one classified as a public-internet write. The Cartesian product therefore
-produces one transition function. Generate and inspect it:
+produces one transition function. Its source Tool values are constrained in the
+global `when` clause because the current Cedar Woodpecker format has no
+per-source `when` clause:
 
 ```bash
-scripts/generate-exfiltration-transitions.sh
-cat .state/exfiltration-transitions.json
+cat analysis/exfiltration-transitions.json
 ```
 
-Run Cedar Woodpecker with that generated transition set:
-
-```bash
-CVC5="$PWD/.state/cvc5/bin/cvc5" .state/bin/cedar-woodpecker escalate \
-  --schema analysis/toolhive.cedarschema \
-  --policies analysis/toolhive.cedar \
-  --transitions .state/exfiltration-transitions.json
-```
-
-For a concise, checked rehearsal of the same analysis, run this instead of the
-two commands above:
+Run the checked analysis against both the vulnerable and fixed policy sets:
 
 ```bash
 task analyze-exfiltration
 ```
 
-The task first verifies that `analysis/toolhive.cedar` still exactly matches the
-combined live policy manifest. Under the modeled assumption that combining an
-internal read with a public write enables exfiltration, it then requires Cedar
-Woodpecker to return one sound path. The synthesized policy grants
-`Action::"exfiltrate_data"` only when the principal belongs to both groups:
+The vulnerable policy produces one sound path requiring both roles. The fixed
+policy produces none, while retaining the intended engineering-only Kubernetes
+read and the two support GitHub permissions:
 
 ```text
-engineering -> list_resources -> internal Kubernetes data
-support     -> add_issue_comment -> public internet
-
-engineering x support -> 1 exfiltration path
+vulnerable policies: 1 engineering + support exfiltration path
+fixed policies: 0 exfiltration paths; 3 intended fixed permissions retained
 ```
+
+Inspect the generated Cedar finding directly:
+
+```bash
+cat policies/implicit/with-implicit-permissions.cedar
+```
+
+The generated ToolHive YAML, transition JSON, and implicit policy are committed
+to the repository. CI regenerates them from the native Cedar sources and fails
+if they drift.
 
 ## 9. Connect OpenCode
 
@@ -372,6 +372,33 @@ Give OpenCode the following prompt:
 ```text
 Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/3
 ```
+
+## 11. Apply the explicit boundary
+
+The vulnerable permissions are each reasonable in isolation. The problem is
+that the support role can inherit an unrelated engineering permit. Inspect the
+fixed native Cedar policy:
+
+```bash
+cat policies/20-combined-access-fixed.cedar
+```
+
+Its `forbid` creates an explicit ceiling: support can call only `issue_read` and
+`add_issue_comment`, regardless of any additional group membership. Those
+exceptions do not grant access by themselves; the existing permits are still
+required.
+
+Apply the generated ToolHive manifest and authenticate again:
+
+```bash
+task policy-fixed
+task demo USER=alice@example.com
+```
+
+Alice still sees the two GitHub issue tools, but `list_resources` is no longer
+available. An engineering-only principal retains `list_resources`; the
+boundary follows the agent role rather than removing the engineering
+capability.
 
 ## Cleanup
 

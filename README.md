@@ -15,12 +15,16 @@ The vMCP exposes MKP's `list_resources` tool plus GitHub's
 `THVGroup::"support"`. Alice belongs to both groups, creating an indirect
 Kubernetes-to-GitHub exfiltration path.
 
-The repository includes a Cedar Woodpecker analysis that models internal-data
-readers and public-internet writers as two maintained lists. Their Cartesian
-product synthesizes the implicit `exfiltrate_data` permission and reports one
-sound authorization-composition path under the modeled transition
-assumptions. See
+The repository includes a demo of `cedar-woodpecker`, an experimental
+privilege-escalation analysis tool. It models internal-data readers and
+public-internet writers as two maintained lists, generates their Cartesian
+product as transition functions, and synthesizes the implicit
+`exfiltrate_data` permission. See
 [`analysis/README.md`](analysis/README.md).
+
+Native Cedar files beside [`policies/toolhive.cedarschema`](policies/toolhive.cedarschema)
+are the policy sources of truth. The ToolHive YAML manifests, transition JSON,
+and synthesized implicit Cedar policy are generated and checked for drift.
 
 ## Pinned releases
 
@@ -45,8 +49,8 @@ want to move to newer releases.
 Supported hosts are macOS, Linux, and WSL2. Prerequisites: Docker,
 [Task](https://taskfile.dev/), Bash, `kind`, `kubectl`, Helm 3.10 or newer,
 curl 7.76 or newer, and `jq`. The optional compound-permission analysis also
-requires Rust 1.89 or newer, Cedar Woodpecker, and cvc5 1.3.1; `DEMO.md`
-contains pinned installation commands.
+requires Go 1.23 or newer, Rust 1.89 or newer, Cedar Woodpecker, and cvc5
+1.3.1; `DEMO.md` contains pinned installation commands.
 
 ```bash
 git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
@@ -99,6 +103,17 @@ permission and grants `issue_read` and `add_issue_comment` through
 `support`. The resulting combination enables the exfiltration demonstrated in
 `DEMO.md`.
 
+Analyze both policy sets, then apply the bounded version:
+
+```bash
+task analyze-exfiltration
+task policy-fixed
+```
+
+The vulnerable policy produces one implicit exfiltration path. The fixed
+policy produces none because the support role has an explicit
+ceiling, while engineering-only principals retain `list_resources`.
+
 MKP's `get_resource` and the GitHub server's other tools are hidden by the vMCP
 allow-list. This keeps tool filtering separate from Cedar's identity-based
 authorization decision.
@@ -127,7 +142,9 @@ task versions  # Installed charts and container images
 task github-secret GITHUB_TOKEN_FILE=/secure/path/github-token  # Rotate token
 task logs      # Operator, vMCP, and Dex logs
 task ready     # Wait for every resource
-task analyze-exfiltration  # Find the compound exfiltration path
+task analyze-exfiltration  # Compare vulnerable and fixed Cedar policies
+task generate-analysis     # Regenerate policy and analysis artifacts
+task test-analysis         # Test the Go generators
 task cleanup   # Delete the demo Kind cluster and saved kubeconfig
 ```
 
