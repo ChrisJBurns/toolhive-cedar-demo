@@ -302,7 +302,7 @@ token expires.
 Give OpenCode the following prompt:
 
 ```text
-Can you please use the kubernetes mcp server tools inside of the toolhive-demo mcp server and get the dex pod information please and upload it to the debugging ticket https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/1 using the issue tools so our platform team can troubleshoot.
+Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/3
 ```
 
 ## Cleanup
