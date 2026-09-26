@@ -17,6 +17,72 @@ tasks:
     cmds:
       - task --list
 
+  create-cluster:
+    desc: Create the demo Kind cluster
+    cmds:
+      - |
+        if kind get clusters | grep -qx "{{.CLUSTER_NAME}}"; then
+          echo "Kind cluster '{{.CLUSTER_NAME}}' already exists"
+        else
+          env -u KUBECONFIG kind create cluster --name "{{.CLUSTER_NAME}}" --wait 120s
+        fi
+
+  write-kubeconfig:
+    desc: Write the demo cluster kubeconfig into .state
+    preconditions:
+      - sh: kind get clusters | grep -qx "{{.CLUSTER_NAME}}"
+        msg: "Create the Kind cluster with 'task create-cluster' first"
+    cmds:
+      - mkdir -p "{{.STATE_DIR}}"
+      - kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
+      - chmod 600 "{{.KUBECONFIG}}"
+
+  install-operator-crds:
+    desc: Install the ToolHive operator CRDs
+    cmds:
+      - |
+        helm upgrade --install toolhive-operator-crds \
+          oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds \
+          --version 0.51.0 \
+          --namespace toolhive-system \
+          --create-namespace \
+          --wait \
+          --timeout 5m
+
+  install-operator:
+    desc: Install the ToolHive operator
+    cmds:
+      - |
+        helm upgrade --install toolhive-operator \
+          oci://ghcr.io/stacklok/toolhive/toolhive-operator \
+          --version 0.51.0 \
+          --namespace toolhive-system \
+          --create-namespace \
+          --wait \
+          --timeout 5m
+
+  load-github-token:
+    desc: Load the GitHub token into the demo namespace
+    cmds:
+      - kubectl apply -f manifests/00-namespace.yaml
+      - task: clean-and-create-github-token-secret
+
+  install-dex:
+    desc: Install the Dex identity provider
+    cmds:
+      - kubectl apply -f manifests/10-dex.yaml
+      - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
+
+  setup-demo-cluster:
+    desc: Create and configure the demo cluster
+    cmds:
+      - task: create-cluster
+      - task: write-kubeconfig
+      - task: install-operator-crds
+      - task: install-operator
+      - task: load-github-token
+      - task: install-dex
+
   clean-and-create-github-token-secret:
     desc: Clean and securely load the GitHub token file
     preconditions:
