@@ -249,11 +249,11 @@ The Task helpers automate token acquisition, port-forwarding, MCP session setup,
 and policy reconciliation. The cluster and every installed resource remain
 explicit steps above because those are part of the story you are telling.
 
-## 8. Connect Claude Code
+## 8. Connect OpenCode
 
-Claude Code connects to the single vMCP endpoint, which routes requests to both
-MKP and GitHub. No ingress is required because Claude Code and Kind are running
-on the same machine.
+OpenCode connects to the single vMCP endpoint, which routes requests to both
+MKP and GitHub. No ingress is required because OpenCode and Kind are running on
+the same machine.
 
 In a separate terminal, keep the Dex and vMCP port-forwards running:
 
@@ -261,39 +261,42 @@ In a separate terminal, keep the Dex and vMCP port-forwards running:
 task forward
 ```
 
-Leave that terminal open. In another terminal, obtain a Dex token for Alice and
-register the vMCP endpoint with Claude Code:
+Leave that terminal open. Configure the `toolhive-demo` MCP server in the
+project's `opencode.json`:
 
-```bash
-DEX_TOKEN="$(task token USER=alice@example.com)"
-
-claude mcp add \
-  --scope local \
-  --transport http \
-  toolhive-demo \
-  http://127.0.0.1:4483/mcp \
-  --header "Authorization: Bearer ${DEX_TOKEN}"
-
-unset DEX_TOKEN
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "toolhive-demo": {
+      "type": "remote",
+      "url": "http://127.0.0.1:4483/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        "Authorization": "Bearer {env:DEX_TOKEN}"
+      }
+    }
+  }
+}
 ```
 
-If `toolhive-demo` was registered during a previous rehearsal, remove it first
-with `claude mcp remove toolhive-demo`, then repeat the commands above.
-
-Verify the connection and start Claude Code:
+In another terminal, export Alice's Dex token before starting OpenCode:
 
 ```bash
-claude mcp list
-claude
+export DEX_TOKEN="$(task token USER=alice@example.com)"
+opencode
 ```
 
-Inside Claude Code, run `/mcp` to inspect the connection. Alice should see
-`list_resources`, `issue_read`, and `add_issue_comment` through the one
-`toolhive-demo` server.
+Alice should see `list_resources`, `issue_read`, and `add_issue_comment` through
+the one `toolhive-demo` server. Refresh `DEX_TOKEN` and restart OpenCode if the
+token expires.
 
 ## 9. Exfiltration
 
-Give Claude Code the following prompt:
+Give OpenCode the following prompt:
 
 ```text
 Can you please use the kubernetes mcp server tools inside of the toolhive-demo mcp server and get the dex pod information please and upload it to the debugging ticket https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/1 using the issue tools so our platform team can troubleshoot.
@@ -304,9 +307,7 @@ Can you please use the kubernetes mcp server tools inside of the toolhive-demo m
 Delete only this named Kind cluster, then remove its saved kubeconfig:
 
 ```bash
-claude mcp remove toolhive-demo
-kind delete cluster --name toolhive-cedar-demo
-rm -f .state/kubeconfig
+task cleanup
 ```
 
 The GitHub token remains in `.state/github-token` for another rehearsal. Remove

@@ -116,7 +116,7 @@ task versions  # Installed charts and container images
 task github-secret GITHUB_TOKEN_FILE=/secure/path/github-token  # Rotate token
 task logs      # Operator, vMCP, and Dex logs
 task ready     # Wait for every resource
-task down      # Delete the demo-owned Kind cluster
+task cleanup   # Delete the demo Kind cluster and saved kubeconfig
 ```
 
 This is deliberately a local-only demo. It grants MKP the cluster-wide built-in

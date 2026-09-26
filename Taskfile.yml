@@ -247,22 +247,13 @@ tasks:
       - kubectl -n {{.NAMESPACE}} logs deployment/github --tail=100
       - kubectl -n {{.NAMESPACE}} logs deployment/dex --tail=100
 
-  down:
-    desc: Delete the demo-owned Kind cluster
+  cleanup:
+    desc: Delete the demo Kind cluster and saved kubeconfig
     cmds:
-      - mkdir -p "{{.STATE_DIR}}"
-      - |
-        set -eu
-        if kind get clusters | grep -qx "{{.CLUSTER_NAME}}"; then
-          kind get kubeconfig --name "{{.CLUSTER_NAME}}" > "{{.KUBECONFIG}}"
-          owner="$(kubectl -n kube-system get configmap/cedar-dex-demo-owner \
-            -o jsonpath='{.data.owner}' 2>/dev/null || true)"
-          if [ "${owner}" != "toolhive-cedar-demo" ]; then
-            echo "Refusing to delete unowned cluster '{{.CLUSTER_NAME}}'." >&2
-            exit 1
-          fi
-          kind delete cluster --name "{{.CLUSTER_NAME}}"
-          rm -f "{{.KUBECONFIG}}"
-        else
-          echo "Kind cluster '{{.CLUSTER_NAME}}' does not exist"
-        fi
+      - kind delete cluster --name "{{.CLUSTER_NAME}}"
+      - rm -f "{{.KUBECONFIG}}"
+
+  down:
+    desc: Alias for cleanup
+    cmds:
+      - task: cleanup
