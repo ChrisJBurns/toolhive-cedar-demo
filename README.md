@@ -4,7 +4,8 @@ This standalone conference demo creates a disposable Kind cluster containing:
 
 - ToolHive Operator and CRDs installed from the official OCI Helm charts
 - Dex with one local user and group claims
-- MKP as a read-only Kubernetes MCP backend
+- MKP as a read-only Kubernetes MCP backend with intentionally overprivileged
+  cluster access
 - The official GitHub MCP server with its token loaded from a local file
 - A Virtual MCP server protected by OIDC and Cedar
 
@@ -119,7 +120,9 @@ task down      # Delete the demo-owned Kind cluster
 ```
 
 This is deliberately a local-only demo. It grants MKP the cluster-wide built-in
-`view` role and enables HTTP OIDC, the OAuth password grant, static users, and a
-known client secret for deterministic conference use. Protect and remove the
-local GitHub token file when it is no longer needed. Do not reuse these settings
-in production.
+`cluster-admin` role and enables HTTP OIDC, the OAuth password grant, static
+users, and a known client secret for deterministic conference use. MKP can read
+the Kubernetes Secret containing the live GitHub token. Use a short-lived,
+fine-grained token, protect and remove its local file when it is no longer
+needed, and delete the demo cluster promptly. Do not reuse these settings in
+production.

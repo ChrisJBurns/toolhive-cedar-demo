@@ -172,7 +172,8 @@ kubectl apply -f manifests/20-toolhive.yaml
 That manifest creates the following pieces:
 
 1. An `MCPOIDCConfig` that trusts Dex.
-2. A service account with Kubernetes's read-only `view` role.
+2. An intentionally overprivileged service account with the cluster-wide
+   `cluster-admin` role.
 3. An `MCPGroup` for the demo backends.
 4. An `MCPServer` running MKP in read-only mode.
 5. An `MCPServer` running the official GitHub server with its token injected

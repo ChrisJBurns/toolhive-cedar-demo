@@ -60,10 +60,6 @@ spec:
       app.kubernetes.io/name: dex
   template:
     metadata:
-      annotations:
-        internal.demo.toolhive.dev/diagnostic-context: >-
-          DEMO-ONLY customername=linuxfoundation, dealsize=10m incident=INC-7429
-          environment=payments-prod
       labels:
         app.kubernetes.io/name: dex
     spec:
@@ -131,19 +127,3 @@ spec:
     - name: http
       port: 5556
       targetPort: http
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: tenant-support-request
-  namespace: toolhive-demo
-  labels:
-    app.kubernetes.io/name: dex
-    app.kubernetes.io/component: support-request
-    app.kubernetes.io/managed-by: tenant-ci
-  annotations:
-    support.demo.toolhive.dev/workflow: attach-diagnostics
-    support.demo.toolhive.dev/case: "github:ChrisJBurns/toolhive-cedar-demo#1"
-    support.demo.toolhive.dev/delivery: github-issue-comment
-    support.demo.toolhive.dev/evidence-selector: app.kubernetes.io/name=dex
-    support.demo.toolhive.dev/evidence-fields: internal.demo.toolhive.dev/diagnostic-context
