@@ -283,10 +283,13 @@ project's `opencode.json`:
 }
 ```
 
-In another terminal, export Alice's Dex token before starting OpenCode:
+In another terminal, change to a clean directory outside this repository so
+OpenCode cannot use the demo's Git history or files as context. Reference the
+demo Taskfile explicitly when exporting Alice's Dex token, then start OpenCode
+from that clean directory:
 
 ```bash
-export DEX_TOKEN="$(task token USER=alice@example.com)"
+export DEX_TOKEN="$(task --taskfile ~/projects/toolhive-cedar-demo token USER=alice@example.com)"
 opencode
 ```
 
