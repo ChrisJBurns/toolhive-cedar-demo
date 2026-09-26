@@ -209,8 +209,7 @@ First authenticate as Alice while the deny-all policy is active:
 task demo USER=alice@example.com
 ```
 
-Despite carrying both group claims, Alice sees an empty tool list and Cedar
-denies the attempted `list_resources` call.
+Despite carrying both group claims, Alice sees an empty tool list.
 
 Now apply policy 1, which gives `engineering` access to the MKP read tool:
 
@@ -220,8 +219,8 @@ task policy-engineering
 task demo USER=alice@example.com
 ```
 
-Alice now sees only `list_resources`, and the Kubernetes read succeeds. Her
-`customer-support-agent` membership still grants nothing.
+Alice now sees only `list_resources`. Her `customer-support-agent` membership
+still grants nothing.
 
 Apply policy 2. It retains policy 1 and gives the `customer-support-agent` role
 access to the two GitHub tools:

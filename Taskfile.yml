@@ -142,7 +142,7 @@ tasks:
         cmd: scripts/get-token.sh "{{.USER}}"
 
   demo:
-    desc: Log in and invoke MKP (USER defaults to Alice)
+    desc: Log in and list visible tools (USER defaults to Alice)
     vars:
       USER: '{{.USER | default "alice@example.com"}}'
     cmds:

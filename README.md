@@ -62,8 +62,7 @@ Alice uses the password `password`:
 | `alice@example.com` | `engineering`, `customer-support-agent` |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
-MCP session, lists the filtered tools, and calls `list_resources` for pods in
-the demo namespace.
+MCP session, and lists the filtered tools without calling them.
 
 ## Talk sequence
 
