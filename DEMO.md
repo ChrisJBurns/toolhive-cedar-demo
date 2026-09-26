@@ -139,7 +139,7 @@ Dex has one static demo identity. Alice uses the password `password`:
 
 | User | Groups |
 | --- | --- |
-| `alice@example.com` | `engineering`, `customer-support-agent` |
+| `alice@example.com` | `engineering`, `support` |
 
 Alice carries both group claims, but group membership alone grants nothing.
 Cedar decides which capability each group receives.
@@ -220,11 +220,11 @@ task policy-engineering
 task demo USER=alice@example.com
 ```
 
-Alice now sees only `list_resources`. Her `customer-support-agent` membership
-still grants nothing.
+Alice now sees only `list_resources`. Her `support` membership still grants
+nothing.
 
-Apply policy 2. It retains policy 1 and gives the `customer-support-agent` role
-access to the two GitHub tools:
+Apply policy 2. It retains policy 1 and gives the `support` role access to the
+two GitHub tools:
 
 ```bash
 cat policies/demo/20-combined-access.yaml
@@ -241,8 +241,8 @@ indirect relationship:
 
 ```text
 engineering -> list_resources -> Kubernetes data
-customer-support-agent -> add_issue_comment -> GitHub
-Alice                  -> both groups -> Kubernetes-to-GitHub exfiltration path
+support     -> add_issue_comment -> GitHub
+Alice       -> both groups -> Kubernetes-to-GitHub exfiltration path
 ```
 
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
