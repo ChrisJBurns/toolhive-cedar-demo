@@ -62,108 +62,65 @@ The demo uses these pinned versions:
 - Cedar Woodpecker: `7015a6fa38b4d48a748443d1aa85f5b741f51200`
 - cvc5: `1.3.1`
 
-## 1. Create the Kubernetes cluster
+## 1. Prepare the GitHub token
 
-Create a local cluster called `toolhive-cedar-demo`:
-
-```bash
-kind create cluster --name toolhive-cedar-demo --wait 120s
-```
-
-Save its kubeconfig inside the repository. The Task helpers use this exact file,
-which prevents the demo from accidentally targeting another cluster.
+Create a fine-grained GitHub token with access to
+`ChrisJBurns/toolhive-cedar-demo-support` and read/write Issues permission.
+Save it in the gitignored state directory:
 
 ```bash
 mkdir -p .state
-kind get kubeconfig --name toolhive-cedar-demo > .state/kubeconfig
+vim .state/github-token
+```
+
+The setup task strips carriage returns and newlines, restricts access to the
+file, and creates the `github-token` Kubernetes Secret without displaying the
+token.
+
+## 2. Set up the complete demo cluster
+
+Run the complete setup as one reproducible operation:
+
+```bash
+task setup-demo-cluster
+```
+
+The task composes these independently runnable steps in order:
+
+| Task | What it does |
+| --- | --- |
+| `create-cluster` | Creates the `toolhive-cedar-demo` Kind cluster. |
+| `write-kubeconfig` | Writes `.state/kubeconfig` and restricts its permissions. |
+| `install-operator-crds` | Installs the ToolHive API definitions. |
+| `install-operator` | Installs the ToolHive operator in `toolhive-system`. |
+| `load-github-token` | Creates `toolhive-demo`, cleans the token file, and creates its Secret. |
+| `install-dex` | Installs Dex and waits for its Deployment. |
+| `install-toolhive-resources` | Applies the OIDC, MCP backend, group, and vMCP resources. |
+| `install-default-deny-policy` | Applies the initial Cedar policy after the ToolHive resources. |
+| `ready` | Waits for every ToolHive resource to become valid and ready. |
+
+The Taskfile automatically points its commands at `.state/kubeconfig`. Export
+the same path in any terminal used for raw Helm or `kubectl` commands:
+
+```bash
 export KUBECONFIG="$PWD/.state/kubeconfig"
 ```
 
-Re-run the `export` command in any new terminal used for raw Helm or `kubectl`
-commands. Show the audience the namespaces in the new cluster before installing
-anything:
+## 3. Inspect the cluster and ToolHive control plane
+
+Show the audience the cluster, the APIs added by the CRD chart, and the operator
+that reconciles those resources into workloads:
 
 ```bash
 kubectl get namespaces
-```
-
-## 2. Install the ToolHive CRDs
-
-ToolHive represents MCP servers, groups, authentication, authorization, and
-virtual MCP servers as Kubernetes custom resources. Install those API
-definitions first:
-
-```bash
-helm upgrade --install toolhive-operator-crds \
-  oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds \
-  --version 0.51.0 \
-  --namespace toolhive-system \
-  --create-namespace \
-  --wait \
-  --timeout 5m
-```
-
-You can make the new API surface visible with:
-
-```bash
 kubectl api-resources --api-group=toolhive.stacklok.dev
-```
-
-## 3. Install the ToolHive operator
-
-The operator watches those resources and turns the desired state into running
-workloads:
-
-```bash
-helm upgrade --install toolhive-operator \
-  oci://ghcr.io/stacklok/toolhive/toolhive-operator \
-  --version 0.51.0 \
-  --namespace toolhive-system \
-  --create-namespace \
-  --wait \
-  --timeout 5m
-```
-
-Verify the installation before moving on:
-
-```bash
-kubectl -n toolhive-system rollout status deployment/toolhive-operator --timeout=5m
 kubectl -n toolhive-system get pods
 helm -n toolhive-system list
 ```
 
-## 4. Load the GitHub token and install Dex
+Both ToolHive charts are pinned to `0.51.0` for a reproducible walkthrough.
 
-Create an isolated namespace:
-
-```bash
-kubectl apply -f manifests/00-namespace.yaml
-```
-
-Create a fine-grained GitHub token with repository access and read/write Issues
-permission, then save it in the gitignored `.state/github-token` file:
-
-```bash
-vim .state/github-token
-```
-
-The Task helper strips carriage returns and newlines, restricts access to the
-file, and creates the `github-token` Kubernetes Secret:
-
-```bash
-task clean-and-create-github-token-secret
-```
-
-The Secret is injected into the GitHub MCP server as
-`GITHUB_PERSONAL_ACCESS_TOKEN`; the token value never appears in a manifest or
-the terminal output.
-
-Now install the local Dex identity provider:
-
-```bash
-kubectl apply -f manifests/10-dex.yaml
-kubectl -n toolhive-demo rollout status deployment/dex --timeout=3m
-```
+## 4. Inspect identity and credentials
 
 Dex has one static demo identity. Alice uses the password `password`:
 
@@ -172,32 +129,16 @@ Dex has one static demo identity. Alice uses the password `password`:
 | `alice@example.com` | `engineering`, `support` |
 
 Alice carries both group claims, but group membership alone grants nothing.
-Cedar decides which capability each group receives.
+Cedar decides which capability each group receives. The GitHub token Secret is
+injected into the GitHub MCP server as `GITHUB_PERSONAL_ACCESS_TOKEN`; its value
+never appears in a manifest or terminal output.
 
-## 5. Establish the default-deny baseline
+## 5. Inspect the MCP resources
 
-Start with a policy that never matches so the vMCP can be created before either
-of Alice's groups has permission to use a tool:
-
-```bash
-cat policies/demo/00-default-deny.yaml
-kubectl apply -f policies/demo/00-default-deny.yaml
-```
-
-ToolHive `0.51.0` requires at least one policy, so this nonmatching permit leaves
-Cedar's default-deny behavior in effect without conflicting with later permits:
-
-```cedar
-permit(principal, action, resource) when { false };
-```
-
-## 6. Create the MCP resources
-
-Inspect the resources if you want to introduce them before applying them:
+Show the manifest that `install-toolhive-resources` applied:
 
 ```bash
 cat manifests/20-toolhive.yaml
-kubectl apply -f manifests/20-toolhive.yaml
 ```
 
 That manifest creates the following pieces:
@@ -216,15 +157,21 @@ MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
 only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
 GitHub's `issue_read` and `add_issue_comment` tools.
 
-Wait for each resource so any startup problem is obvious:
+## 6. Confirm default deny and readiness
+
+The setup deliberately creates the ToolHive resources before applying the
+authorization config they reference. It then installs the default-deny policy
+and waits for the full stack to become ready. Inspect the generated policy:
 
 ```bash
-kubectl -n toolhive-demo wait --for=condition=Valid mcpoidcconfig/dex --timeout=2m
-kubectl -n toolhive-demo wait --for=condition=Valid mcpauthzconfig/resources-access --timeout=2m
-kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready mcpserver/mkp --timeout=5m
-kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready mcpserver/github --timeout=5m
-kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready mcpgroup/demo-backends --timeout=5m
-kubectl -n toolhive-demo wait --for=jsonpath='{.status.phase}'=Ready virtualmcpserver/cedar-demo --timeout=5m
+cat policies/demo/00-default-deny.yaml
+```
+
+ToolHive `0.51.0` requires at least one policy, so this nonmatching permit leaves
+Cedar's default-deny behavior in effect without conflicting with later permits:
+
+```cedar
+permit(principal, action, resource) when { false };
 ```
 
 Finally, show what the operator created:
@@ -267,9 +214,10 @@ Alice now sees exactly `list_resources`, `issue_read`, and `add_issue_comment`.
 Neither group appears dangerous in isolation, but Alice's effective permissions
 now contain both a private-data source and an external write destination.
 
-The Task helpers automate token acquisition, port-forwarding, MCP session setup,
-and policy reconciliation. The cluster, charts, and workload manifests remain
-explicit steps above because those are part of the story you are telling.
+`setup-demo-cluster` composes visible, independently runnable tasks, while the
+sections above make each installed component and dependency explicit. The
+remaining Task helpers automate token acquisition, port-forwarding, MCP session
+setup, and policy reconciliation.
 
 ## 8. Analyze the compound permissions
 
