@@ -28,13 +28,13 @@ func TestValidateManifestBindingsRejectsUnexposedClassifiedTool(t *testing.T) {
 	}
 }
 
-func TestValidateManifestBindingsRejectsMissingAliceGroup(t *testing.T) {
+func TestValidateManifestBindingsRejectsMissingSupportBotGroup(t *testing.T) {
 	t.Parallel()
 	err := ValidateManifestBindings(manifestTestEnvironments(),
 		[]byte(`permit(principal in THVGroup::"security", action, resource);`),
 		[]byte(toolHiveTestManifest), []byte(dexTestManifest))
-	if err == nil || !strings.Contains(err.Error(), `Alice does not belong to Cedar group "security"`) {
-		t.Fatalf("ValidateManifestBindings() error = %v, want missing Alice group error", err)
+	if err == nil || !strings.Contains(err.Error(), `support-bot does not belong to Cedar group "security"`) {
+		t.Fatalf("ValidateManifestBindings() error = %v, want missing support-bot group error", err)
 	}
 }
 
@@ -75,7 +75,7 @@ metadata:
 data:
   config.yaml: |
     staticPasswords:
-      - email: alice@example.com
+      - email: support-bot@example.com
         groups:
           - engineering
           - support

@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 namespace="toolhive-demo"
-username="${1:-alice@example.com}"
+username="${1:-support-bot@example.com}"
 endpoint="http://127.0.0.1:4483/mcp"
 tmp_dir="$(mktemp -d)"
 port_forward_pid=""

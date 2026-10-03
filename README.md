@@ -12,8 +12,8 @@ This standalone conference demo creates a disposable Kind cluster containing:
 The vMCP exposes MKP's `list_resources` tool plus GitHub's
 `issue_read` and `add_issue_comment` tools. Cedar grants the MKP tool to
 `THVGroup::"engineering"` and the GitHub tools to
-`THVGroup::"support"`. Alice belongs to both groups, creating an indirect
-Kubernetes-to-GitHub exfiltration path.
+`THVGroup::"support"`. The `support-bot` identity belongs to both groups,
+creating an indirect Kubernetes-to-GitHub exfiltration path.
 
 The repository includes a demo of `cedar-woodpecker`, an experimental
 privilege-escalation analysis tool. It models internal-data readers and
@@ -74,23 +74,23 @@ Use a fine-grained token with repository access and read/write Issues
 permission. ToolHive creates the `github-token` Kubernetes Secret from the file
 and injects it into the GitHub MCP server; the token never enters a manifest.
 
-Alice uses the password `password`:
+The support bot uses the password `password`:
 
 | User | Dex groups |
 | --- | --- |
-| `alice@example.com` | `engineering`, `support` |
+| `support-bot@example.com` | `engineering`, `support` |
 
 The `demo` task obtains a Dex JWT, opens temporary port-forwards, initializes an
 MCP session, and lists the filtered tools without calling them.
 
 ## Talk sequence
 
-Create the complete cluster with the vulnerable combined policy, then show
-Alice's effective permissions:
+Create the complete cluster with the vulnerable combined policy, then show the
+support bot's effective permissions:
 
 ```bash
 task setup-demo-cluster
-task demo USER=alice@example.com
+task demo USER=support-bot@example.com
 ```
 
 The combined policy grants `list_resources` through `engineering` and grants
@@ -124,7 +124,7 @@ task forward
 The MCP endpoint is `http://127.0.0.1:4483/mcp`. Generate a bearer token with:
 
 ```bash
-task token USER=alice@example.com
+task token USER=support-bot@example.com
 ```
 
 Configure the client to send that value as `Authorization: Bearer <token>`.

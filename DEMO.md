@@ -93,8 +93,8 @@ The task runs these independently runnable steps in order:
 - `install-operator` installs the ToolHive controller in `toolhive-system`.
 - `load-github-token` creates the demo namespace and token Secret without
   displaying its value.
-- `install-dex` installs Dex with `alice@example.com` (password `password`) in
-  the `engineering` and `support` groups.
+- `install-dex` installs Dex with `support-bot@example.com` (password
+  `password`) in the `engineering` and `support` groups.
 - `install-toolhive-resources` creates the MCP backends, group, and virtual
   server that receives the GitHub token as `GITHUB_PERSONAL_ACCESS_TOKEN`.
 - `install-combined-access-policy` applies `policies/demo/20-combined-access.yaml`
@@ -149,7 +149,7 @@ MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
 only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
 GitHub's `issue_read` and `add_issue_comment` tools.
 
-## 5. Inspect Alice's effective permissions
+## 5. Inspect the support bot's effective permissions
 
 The setup deliberately creates the ToolHive resources before applying the
 authorization config they reference. It then installs the vulnerable combined
@@ -162,16 +162,17 @@ cat policies/demo/20-combined-access.yaml
 The `engineering` group can call `list_resources`; the `support` group can call
 `issue_read` and `add_issue_comment`.
 
-Show what the operator created, then authenticate as Alice:
+Show what the operator created, then authenticate as the support bot:
 
 ```bash
 task status
-task demo USER=alice@example.com
+task demo USER=support-bot@example.com
 ```
 
-Alice now sees exactly `list_resources`, `issue_read`, and `add_issue_comment`.
-Neither group appears dangerous in isolation, but Alice's effective permissions
-now contain both a private-data source and an external write destination.
+The support bot now sees exactly `list_resources`, `issue_read`, and
+`add_issue_comment`. Neither group appears dangerous in isolation, but the
+bot's effective permissions now contain both a private-data source and an
+external write destination.
 
 `setup-demo-cluster` composes visible, independently runnable tasks, while the
 sections above make each installed component and dependency explicit. The
@@ -261,17 +262,17 @@ project's `opencode.json`:
 
 In another terminal, change to a clean directory outside this repository so
 OpenCode cannot use the demo's Git history or files as context. Reference the
-demo Taskfile explicitly when exporting Alice's Dex token, then start OpenCode
-from that clean directory:
+demo Taskfile explicitly when exporting the support bot's Dex token, then start
+OpenCode from that clean directory:
 
 ```bash
-export DEX_TOKEN="$(task --taskfile ~/projects/toolhive-cedar-demo token USER=alice@example.com)"
+export DEX_TOKEN="$(task --taskfile ~/projects/toolhive-cedar-demo token USER=support-bot@example.com)"
 opencode
 ```
 
-Alice should see `list_resources`, `issue_read`, and `add_issue_comment` through
-the one `toolhive-demo` server. Refresh `DEX_TOKEN` and restart OpenCode if the
-token expires.
+The support bot should see `list_resources`, `issue_read`, and
+`add_issue_comment` through the one `toolhive-demo` server. Refresh `DEX_TOKEN`
+and restart OpenCode if the token expires.
 
 ## 8. Exfiltration
 
@@ -300,12 +301,12 @@ Apply the generated ToolHive manifest and authenticate again:
 
 ```bash
 task policy-fixed
-task demo USER=alice@example.com
+task demo USER=support-bot@example.com
 ```
 
-Alice still sees the two GitHub issue tools, but `list_resources` is no longer
-available. An engineering-only principal retains `list_resources`; the
-boundary follows the agent role rather than removing the engineering
+The support bot still sees the two GitHub issue tools, but `list_resources` is
+no longer available. An engineering-only principal retains `list_resources`;
+the boundary follows the agent role rather than removing the engineering
 capability.
 
 ## Cleanup

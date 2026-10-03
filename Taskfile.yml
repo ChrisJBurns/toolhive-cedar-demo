@@ -147,17 +147,17 @@ tasks:
       - scripts/forward.sh
 
   token:
-    desc: Print a Dex access token (USER defaults to Alice)
+    desc: Print a Dex access token (USER defaults to support-bot)
     vars:
-      USER: '{{.USER | default "alice@example.com"}}'
+      USER: '{{.USER | default "support-bot@example.com"}}'
     cmds:
       - silent: true
         cmd: scripts/get-token.sh "{{.USER}}"
 
   demo:
-    desc: Log in and list visible tools (USER defaults to Alice)
+    desc: Log in and list visible tools (USER defaults to support-bot)
     vars:
-      USER: '{{.USER | default "alice@example.com"}}'
+      USER: '{{.USER | default "support-bot@example.com"}}'
     cmds:
       - scripts/demo.sh "{{.USER}}"
 
@@ -179,13 +179,6 @@ tasks:
     desc: Run unit tests for the Cedar analysis generators
     cmds:
       - go test ./...
-
-  policy-combined-access:
-    desc: Apply the vulnerable combined-access policy
-    cmds:
-      - task: apply-policy
-        vars:
-          POLICY_FILE: policies/demo/20-combined-access.yaml
 
   policy-fixed:
     desc: Bound the support role to GitHub issue tools

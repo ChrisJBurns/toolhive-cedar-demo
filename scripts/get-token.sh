@@ -3,7 +3,7 @@
 set -euo pipefail
 
 namespace="toolhive-demo"
-username="${1:-alice@example.com}"
+username="${1:-support-bot@example.com}"
 password="${DEMO_PASSWORD:-password}"
 client_secret="${DEX_CLIENT_SECRET:-toolhive-demo-secret}"
 token_url="http://127.0.0.1:5556/dex/token"

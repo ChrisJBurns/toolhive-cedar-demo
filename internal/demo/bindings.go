@@ -56,13 +56,13 @@ func ValidateManifestBindings(
 		}
 	}
 
-	aliceGroups, err := dexUserGroups(dexManifest, "alice@example.com")
+	supportBotGroups, err := dexUserGroups(dexManifest, "support-bot@example.com")
 	if err != nil {
 		return fmt.Errorf("inspect Dex manifest: %w", err)
 	}
 	for _, group := range cedarGroups(vulnerableCedar) {
-		if _, exists := aliceGroups[group]; !exists {
-			return fmt.Errorf("Alice does not belong to Cedar group %q", group)
+		if _, exists := supportBotGroups[group]; !exists {
+			return fmt.Errorf("support-bot does not belong to Cedar group %q", group)
 		}
 	}
 	return nil
