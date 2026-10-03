@@ -1,0 +1,25 @@
+{
+  "transitions": [
+    {
+      "name": "exfiltrate-via-list_resources-and-add_issue_comment",
+      "principal": [
+        "Client"
+      ],
+      "sources": [
+        {
+          "action": "Action::\"call_tool\"",
+          "resource": "Tool"
+        },
+        {
+          "action": "Action::\"call_tool\"",
+          "resource": "Tool"
+        }
+      ],
+      "target": {
+        "action": "Action::\"exfiltrate_data\"",
+        "resource": "Exfiltration"
+      },
+      "when": "context.resource1 == Tool::\"list_resources\" && context.resource2 == Tool::\"add_issue_comment\""
+    }
+  ]
+}

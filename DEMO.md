@@ -16,6 +16,8 @@ helm version
 task --version
 curl --version
 jq --version
+go version
+cargo --version
 ```
 
 Clone the repository and enter it:
@@ -25,12 +27,40 @@ git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
 ```
 
+Install the experimental Cedar Woodpecker CLI from the exact revision used by
+this demo. It requires Rust 1.89 or newer:
+
+```bash
+cargo install --locked \
+  --root "$PWD/.state" \
+  --git https://github.com/luxas/cedar-woodpecker.git \
+  --rev 7015a6fa38b4d48a748443d1aa85f5b741f51200 \
+  cedar-woodpecker
+```
+
+Cedar Woodpecker also requires cvc5. On an Apple Silicon Mac, install the
+pinned binary inside the repository:
+
+```bash
+mkdir -p .state/cvc5/bin
+curl -fsSL https://github.com/cvc5/cvc5/releases/download/cvc5-1.3.1/cvc5-macOS-arm64-static.zip -o .state/cvc5.zip
+printf '%s  %s\n' a0e7f5b03b1bc4284fbfff7cdfb08c704801701cf7ece83a13f8a505e7581215 .state/cvc5.zip | shasum -a 256 -c -
+unzip -oqj .state/cvc5.zip '*/bin/cvc5' -d .state/cvc5/bin
+chmod +x .state/cvc5/bin/cvc5
+.state/cvc5/bin/cvc5 --version
+.state/bin/cedar-woodpecker --version
+```
+
+Use the corresponding cvc5 1.3.1 archive for Intel macOS, Linux, or WSL2.
+
 The demo uses these pinned versions:
 
 - ToolHive operator and CRD charts: `0.51.0`
 - Dex: `v2.45.1`
 - MKP: `v0.4.3`
 - GitHub MCP Server: `v1.12.2`
+- Cedar Woodpecker: `7015a6fa38b4d48a748443d1aa85f5b741f51200`
+- cvc5: `1.3.1`
 
 ## 1. Create the Kubernetes cluster
 
@@ -236,20 +266,58 @@ Alice now sees exactly `list_resources`, `issue_read`, and `add_issue_comment`.
 Neither group appears dangerous in isolation, but Alice's effective permissions
 now contain both a private-data source and an external write destination.
 
-At this point, query Alice in the Cedar analysis tool. It should show the
-indirect relationship:
-
-```text
-engineering -> list_resources -> Kubernetes data
-support     -> add_issue_comment -> GitHub
-Alice       -> both groups -> Kubernetes-to-GitHub exfiltration path
-```
-
 The Task helpers automate token acquisition, port-forwarding, MCP session setup,
-and policy reconciliation. The cluster and every installed resource remain
+and policy reconciliation. The cluster, charts, and workload manifests remain
 explicit steps above because those are part of the story you are telling.
 
-## 8. Connect OpenCode
+## 8. Analyze the compound permissions
+
+The native Cedar files are the source of truth for both the live ToolHive
+configuration and the offline analysis. Inspect the schema, vulnerable policy,
+and the two classified request lists:
+
+```bash
+cat policies/toolhive.cedarschema
+cat policies/20-combined-access.cedar
+cat analysis/request-environments.json
+```
+
+There is currently one exact tool request classified as an internal-data read
+and one classified as a public-internet write. The Cartesian product therefore
+produces one transition function. Its source Tool values are constrained in the
+global `when` clause because the current Cedar Woodpecker format has no
+per-source `when` clause:
+
+```bash
+cat analysis/exfiltration-transitions.json
+```
+
+Run the checked analysis against both the vulnerable and fixed policy sets:
+
+```bash
+task analyze-exfiltration
+```
+
+The vulnerable policy produces one sound path requiring both roles. The fixed
+policy produces none, while retaining the intended engineering-only Kubernetes
+read and the two support GitHub permissions:
+
+```text
+vulnerable policies: 1 engineering + support exfiltration path
+fixed policies: 0 exfiltration paths; 3 intended fixed permissions retained
+```
+
+Inspect the generated Cedar finding directly:
+
+```bash
+cat policies/implicit/with-implicit-permissions.cedar
+```
+
+The generated ToolHive YAML, transition JSON, and implicit policy are committed
+to the repository. CI regenerates them from the native Cedar sources and fails
+if they drift.
+
+## 9. Connect OpenCode
 
 OpenCode connects to the single vMCP endpoint, which routes requests to both
 MKP and GitHub. No ingress is required because OpenCode and Kind are running on
@@ -297,13 +365,40 @@ Alice should see `list_resources`, `issue_read`, and `add_issue_comment` through
 the one `toolhive-demo` server. Refresh `DEX_TOKEN` and restart OpenCode if the
 token expires.
 
-## 9. Exfiltration
+## 10. Exfiltration
 
 Give OpenCode the following prompt:
 
 ```text
 Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/3
 ```
+
+## 11. Apply the explicit boundary
+
+The vulnerable permissions are each reasonable in isolation. The problem is
+that the support role can inherit an unrelated engineering permit. Inspect the
+fixed native Cedar policy:
+
+```bash
+cat policies/20-combined-access-fixed.cedar
+```
+
+Its `forbid` creates an explicit ceiling: support can call only `issue_read` and
+`add_issue_comment`, regardless of any additional group membership. Those
+exceptions do not grant access by themselves; the existing permits are still
+required.
+
+Apply the generated ToolHive manifest and authenticate again:
+
+```bash
+task policy-fixed
+task demo USER=alice@example.com
+```
+
+Alice still sees the two GitHub issue tools, but `list_resources` is no longer
+available. An engineering-only principal retains `list_resources`; the
+boundary follows the agent role rather than removing the engineering
+capability.
 
 ## Cleanup
 

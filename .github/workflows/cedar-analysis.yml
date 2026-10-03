@@ -1,0 +1,60 @@
+---
+name: Cedar analysis
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Task
+        run: go install github.com/go-task/task/v3/cmd/task@v3.42.1
+
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup default 1.89.0
+
+      - name: Install Cedar Woodpecker
+        run: |
+          cargo install --locked \
+            --root "$PWD/.state" \
+            --git https://github.com/luxas/cedar-woodpecker.git \
+            --rev 7015a6fa38b4d48a748443d1aa85f5b741f51200 \
+            cedar-woodpecker
+
+      - name: Install cvc5
+        env:
+          CVC5_URL: >-
+            https://github.com/cvc5/cvc5/releases/download/cvc5-1.3.1/cvc5-Linux-x86_64-static.zip
+          CVC5_SHA256: >-
+            1a1cda20d2df4938fa4944a69f33ddc9172e319ece0eed0aa09c4d7abede3ed1
+        run: |
+          mkdir -p .state/cvc5/bin
+          curl -fsSL "$CVC5_URL" -o .state/cvc5.zip
+          printf '%s  %s\n' "$CVC5_SHA256" .state/cvc5.zip | sha256sum -c -
+          unzip -oqj .state/cvc5.zip '*/bin/cvc5' -d .state/cvc5/bin
+          chmod +x .state/cvc5/bin/cvc5
+
+      - name: Test generators
+        run: task test-analysis
+
+      - name: Verify generated policies and analysis
+        run: task analyze-exfiltration

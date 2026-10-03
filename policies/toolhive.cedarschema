@@ -1,0 +1,14 @@
+entity THVGroup;
+entity Client in [THVGroup];
+entity Tool;
+entity Exfiltration;
+
+action call_tool appliesTo {
+  principal: Client,
+  resource: Tool
+};
+
+action exfiltrate_data appliesTo {
+  principal: Client,
+  resource: Exfiltration
+};
