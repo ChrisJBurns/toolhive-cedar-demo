@@ -371,7 +371,7 @@ token expires.
 Give OpenCode the following prompt:
 
 ```text
-Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo/issues/3
+Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo-support/issues/1
 ```
 
 ## 11. Apply the explicit boundary
