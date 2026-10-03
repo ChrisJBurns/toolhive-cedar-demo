@@ -92,8 +92,8 @@ tasks:
       - task: install-operator
       - task: load-github-token
       - task: install-dex
-      - task: install-default-deny-policy
       - task: install-toolhive-resources
+      - task: install-default-deny-policy
       - task: ready
 
   clean-and-create-github-token-secret:
