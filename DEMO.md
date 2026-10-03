@@ -97,7 +97,7 @@ The task runs these independently runnable steps in order:
   `password`) in the `engineering` and `support` groups.
 - `install-toolhive-resources` creates the MCP backends, group, and virtual
   server that receives the GitHub token as `GITHUB_PERSONAL_ACCESS_TOKEN`.
-- `install-combined-access-policy` applies `policies/demo/20-combined-access.yaml`
+- `install-combined-access-policy` applies `policies/demo/combined-access.yaml`
   after the ToolHive resources.
 - `ready` waits for the complete stack to become valid and ready.
 
@@ -156,7 +156,7 @@ authorization config they reference. It then installs the vulnerable combined
 policy and waits for the full stack to become ready. Inspect that policy:
 
 ```bash
-cat policies/demo/20-combined-access.yaml
+cat policies/demo/combined-access.yaml
 ```
 
 The `engineering` group can call `list_resources`; the `support` group can call

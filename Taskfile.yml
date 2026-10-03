@@ -76,7 +76,7 @@ tasks:
   install-combined-access-policy:
     desc: Install the vulnerable combined-access policy
     cmds:
-      - kubectl apply -f policies/demo/20-combined-access.yaml
+      - kubectl apply -f policies/demo/combined-access.yaml
 
   install-toolhive-resources:
     desc: Install the ToolHive MCP resources
@@ -185,7 +185,7 @@ tasks:
     cmds:
       - task: apply-policy
         vars:
-          POLICY_FILE: policies/demo-fixed/20-combined-access.yaml
+          POLICY_FILE: policies/demo-fixed/combined-access.yaml
 
   apply-policy:
     internal: true

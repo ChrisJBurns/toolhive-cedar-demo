@@ -20,8 +20,8 @@ func main() {
 		source string
 		output string
 	}{
-		{"policies/20-combined-access.cedar", "policies/demo/20-combined-access.yaml"},
-		{"policies/20-combined-access-fixed.cedar", "policies/demo-fixed/20-combined-access.yaml"},
+		{"policies/20-combined-access.cedar", "policies/demo/combined-access.yaml"},
+		{"policies/20-combined-access-fixed.cedar", "policies/demo-fixed/combined-access.yaml"},
 	}
 
 	for _, mapping := range mappings {
