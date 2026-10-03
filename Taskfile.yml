@@ -73,8 +73,18 @@ tasks:
       - kubectl apply -f manifests/10-dex.yaml
       - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
 
+  install-default-deny-policy:
+    desc: Install the default-deny authorization policy
+    cmds:
+      - kubectl apply -f policies/demo/00-default-deny.yaml
+
+  install-toolhive-resources:
+    desc: Install the ToolHive MCP resources
+    cmds:
+      - kubectl apply -f manifests/20-toolhive.yaml
+
   setup-demo-cluster:
-    desc: Create and configure the demo cluster
+    desc: Create and configure the complete demo cluster
     cmds:
       - task: create-cluster
       - task: write-kubeconfig
@@ -82,6 +92,9 @@ tasks:
       - task: install-operator
       - task: load-github-token
       - task: install-dex
+      - task: install-default-deny-policy
+      - task: install-toolhive-resources
+      - task: ready
 
   clean-and-create-github-token-secret:
     desc: Clean and securely load the GitHub token file
