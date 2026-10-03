@@ -97,12 +97,12 @@ The task runs these independently runnable steps in order:
   the `engineering` and `support` groups.
 - `install-toolhive-resources` creates the MCP backends, group, and virtual
   server that receives the GitHub token as `GITHUB_PERSONAL_ACCESS_TOKEN`.
-- `install-default-deny-policy` applies the initial Cedar policy after the
-  ToolHive resources.
+- `install-combined-access-policy` applies `policies/demo/20-combined-access.yaml`
+  after the ToolHive resources.
 - `ready` waits for the complete stack to become valid and ready.
 
-Alice's group claims grant no access on their own; the Cedar policies introduced
-later decide which capabilities each group receives.
+Group membership alone grants nothing; the installed Cedar policy maps
+`engineering` to `list_resources` and `support` to the two GitHub issue tools.
 
 The Taskfile automatically points its commands at `.state/kubeconfig`. Export
 the same path in any terminal used for raw Helm or `kubectl` commands:
@@ -149,58 +149,23 @@ MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
 only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
 GitHub's `issue_read` and `add_issue_comment` tools.
 
-## 5. Confirm default deny and readiness
+## 5. Inspect Alice's effective permissions
 
 The setup deliberately creates the ToolHive resources before applying the
-authorization config they reference. It then installs the default-deny policy
-and waits for the full stack to become ready. Inspect the generated policy:
-
-```bash
-cat policies/demo/00-default-deny.yaml
-```
-
-ToolHive `0.51.0` requires at least one policy, so this nonmatching permit leaves
-Cedar's default-deny behavior in effect without conflicting with later permits:
-
-```cedar
-permit(principal, action, resource) when { false };
-```
-
-Finally, show what the operator created:
-
-```bash
-task status
-```
-
-## 6. Verify Alice's default-deny baseline
-
-First authenticate as Alice while the default-deny baseline is active:
-
-```bash
-task demo USER=alice@example.com
-```
-
-Despite carrying both group claims, Alice sees an empty tool list.
-
-## 7. Build Alice's effective permissions
-
-Now apply policy 1, which gives `engineering` access to the MKP read tool:
-
-```bash
-cat policies/demo/10-engineering.yaml
-task policy-engineering
-task demo USER=alice@example.com
-```
-
-Alice now sees only `list_resources`. Her `support` membership still grants
-nothing.
-
-Apply policy 2. It retains policy 1 and gives the `support` role access to the
-two GitHub tools:
+authorization config they reference. It then installs the vulnerable combined
+policy and waits for the full stack to become ready. Inspect that policy:
 
 ```bash
 cat policies/demo/20-combined-access.yaml
-task policy-combined-access
+```
+
+The `engineering` group can call `list_resources`; the `support` group can call
+`issue_read` and `add_issue_comment`.
+
+Show what the operator created, then authenticate as Alice:
+
+```bash
+task status
 task demo USER=alice@example.com
 ```
 
@@ -213,7 +178,7 @@ sections above make each installed component and dependency explicit. The
 remaining Task helpers automate token acquisition, port-forwarding, MCP session
 setup, and policy reconciliation.
 
-## 8. Analyze the compound permissions
+## 6. Analyze the compound permissions
 
 The native Cedar files are the source of truth for both the live ToolHive
 configuration and the offline analysis. Inspect the schema, vulnerable policy,
@@ -260,7 +225,7 @@ The generated ToolHive YAML, transition JSON, and implicit policy are committed
 to the repository. CI regenerates them from the native Cedar sources and fails
 if they drift.
 
-## 9. Connect OpenCode
+## 7. Connect OpenCode
 
 OpenCode connects to the single vMCP endpoint, which routes requests to both
 MKP and GitHub. No ingress is required because OpenCode and Kind are running on
@@ -308,7 +273,7 @@ Alice should see `list_resources`, `issue_read`, and `add_issue_comment` through
 the one `toolhive-demo` server. Refresh `DEX_TOKEN` and restart OpenCode if the
 token expires.
 
-## 10. Exfiltration
+## 8. Exfiltration
 
 Give OpenCode the following prompt:
 
@@ -316,7 +281,7 @@ Give OpenCode the following prompt:
 Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo-support/issues/1
 ```
 
-## 11. Apply the explicit boundary
+## 9. Apply the explicit boundary
 
 The vulnerable permissions are each reasonable in isolation. The problem is
 that the support role can inherit an unrelated engineering permit. Inspect the

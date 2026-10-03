@@ -122,15 +122,9 @@ func ValidateDemoResults(vulnerable, fixed []Escalation, transitionName string) 
 	return nil
 }
 
-// ValidateStagedPolicyCubes checks every staged Cedar source after
-// cedar-woodpecker has parsed and typechecked it.
-func ValidateStagedPolicyCubes(defaultDeny, engineering, vulnerable, fixed []Cube) error {
-	if err := validateCubeSet("default-deny policies", defaultDeny, nil); err != nil {
-		return err
-	}
-	if err := validateCubeSet("engineering policies", engineering, engineeringCubeExpectations()); err != nil {
-		return err
-	}
+// ValidatePolicyCubes checks the vulnerable and fixed Cedar sources after
+// cedar-woodpecker has parsed and typechecked them.
+func ValidatePolicyCubes(vulnerable, fixed []Cube) error {
 	if err := validateCubeSet("vulnerable policies", vulnerable, vulnerableCubeExpectations()); err != nil {
 		return err
 	}

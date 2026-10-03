@@ -60,28 +60,28 @@ func TestValidateFixedCubesRejectsUnconstrainedEngineeringRead(t *testing.T) {
 	}
 }
 
-func TestValidateStagedPolicyCubes(t *testing.T) {
+func TestValidatePolicyCubes(t *testing.T) {
 	t.Parallel()
-	engineering := []Cube{fixedCube("engineering-read", engineeringCubeExpectations()[0].condition)}
-	vulnerable := append(append([]Cube{}, engineering...), []Cube{
+	vulnerable := []Cube{
+		fixedCube("engineering-read", engineeringCubeExpectations()[0].condition),
 		fixedCube("support-comment", supportCubeExpectations()[0].condition),
 		fixedCube("support-read", supportCubeExpectations()[1].condition),
-	}...)
+	}
 	fixed := []Cube{
 		fixedCube("engineering-read-constrained", fixedCubeExpectations()[0].condition),
 		fixedCube("support-comment", supportCubeExpectations()[0].condition),
 		fixedCube("support-read", supportCubeExpectations()[1].condition),
 	}
-	if err := ValidateStagedPolicyCubes(nil, engineering, vulnerable, fixed); err != nil {
-		t.Fatalf("ValidateStagedPolicyCubes() error = %v", err)
+	if err := ValidatePolicyCubes(vulnerable, fixed); err != nil {
+		t.Fatalf("ValidatePolicyCubes() error = %v", err)
 	}
 }
 
-func TestValidateStagedPolicyCubesRejectsDefaultDenyPermission(t *testing.T) {
+func TestValidatePolicyCubesRejectsIncompleteVulnerablePolicy(t *testing.T) {
 	t.Parallel()
-	unexpected := []Cube{fixedCube("unexpected", engineeringCubeExpectations()[0].condition)}
-	if err := ValidateStagedPolicyCubes(unexpected, nil, nil, nil); err == nil || !strings.Contains(err.Error(), "default-deny") {
-		t.Fatalf("ValidateStagedPolicyCubes() error = %v, want default-deny cube error", err)
+	vulnerable := []Cube{fixedCube("engineering-read", engineeringCubeExpectations()[0].condition)}
+	if err := ValidatePolicyCubes(vulnerable, nil); err == nil || !strings.Contains(err.Error(), "vulnerable policies") {
+		t.Fatalf("ValidatePolicyCubes() error = %v, want vulnerable policy cube error", err)
 	}
 }
 

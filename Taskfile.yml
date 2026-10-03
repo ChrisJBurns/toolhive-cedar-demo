@@ -73,10 +73,10 @@ tasks:
       - kubectl apply -f manifests/10-dex.yaml
       - kubectl -n {{.NAMESPACE}} rollout status deployment/dex --timeout=3m
 
-  install-default-deny-policy:
-    desc: Install the default-deny authorization policy
+  install-combined-access-policy:
+    desc: Install the vulnerable combined-access policy
     cmds:
-      - kubectl apply -f policies/demo/00-default-deny.yaml
+      - kubectl apply -f policies/demo/20-combined-access.yaml
 
   install-toolhive-resources:
     desc: Install the ToolHive MCP resources
@@ -93,7 +93,7 @@ tasks:
       - task: load-github-token
       - task: install-dex
       - task: install-toolhive-resources
-      - task: install-default-deny-policy
+      - task: install-combined-access-policy
       - task: ready
 
   clean-and-create-github-token-secret:
@@ -180,22 +180,8 @@ tasks:
     cmds:
       - go test ./...
 
-  policy-default-deny:
-    desc: Apply the default-deny baseline
-    cmds:
-      - task: apply-policy
-        vars:
-          POLICY_FILE: policies/demo/00-default-deny.yaml
-
-  policy-engineering:
-    desc: Allow engineering to read Kubernetes resources
-    cmds:
-      - task: apply-policy
-        vars:
-          POLICY_FILE: policies/demo/10-engineering.yaml
-
   policy-combined-access:
-    desc: Add GitHub access for the support role
+    desc: Apply the vulnerable combined-access policy
     cmds:
       - task: apply-policy
         vars:

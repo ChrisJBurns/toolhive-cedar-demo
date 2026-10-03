@@ -60,9 +60,9 @@ git clone https://github.com/ChrisJBurns/toolhive-cedar-demo.git
 cd toolhive-cedar-demo
 ```
 
-Follow [DEMO.md](DEMO.md) for the command-by-command stage setup. Cluster
-creation, chart installation, and resource application remain explicit so the
-audience can see each part of the system being assembled.
+Follow [DEMO.md](DEMO.md) for the command-by-command walkthrough.
+`task setup-demo-cluster` runs named setup stages in order, while the runbook
+explains what each stage installs and what to show on screen.
 
 The token file is gitignored. To use a file elsewhere, override its location:
 
@@ -85,26 +85,18 @@ MCP session, and lists the filtered tools without calling them.
 
 ## Talk sequence
 
-Start with no tool access:
+Create the complete cluster with the vulnerable combined policy, then show
+Alice's effective permissions:
 
 ```bash
-task policy-default-deny
-```
-
-Then build Alice's effective permissions in two stages:
-
-```bash
-task policy-engineering
-task demo USER=alice@example.com
-
-task policy-combined-access
+task setup-demo-cluster
 task demo USER=alice@example.com
 ```
 
-Policy 1 grants `list_resources` through `engineering`. Policy 2 retains that
-permission and grants `issue_read` and `add_issue_comment` through
-`support`. The resulting combination enables the exfiltration demonstrated in
-`DEMO.md`.
+The combined policy grants `list_resources` through `engineering` and grants
+`issue_read` and `add_issue_comment` through `support`. The resulting
+internal-data reader and external writer enable the exfiltration demonstrated
+in `DEMO.md`.
 
 Analyze both policy sets, then apply the bounded version:
 
