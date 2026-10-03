@@ -85,19 +85,24 @@ Run the complete setup as one reproducible operation:
 task setup-demo-cluster
 ```
 
-The task composes these independently runnable steps in order:
+The task runs these independently runnable steps in order:
 
-| Task | What it does |
-| --- | --- |
-| `create-cluster` | Creates the `toolhive-cedar-demo` Kind cluster. |
-| `write-kubeconfig` | Writes `.state/kubeconfig` and restricts its permissions. |
-| `install-operator-crds` | Installs the ToolHive API definitions. |
-| `install-operator` | Installs the ToolHive operator in `toolhive-system`. |
-| `load-github-token` | Creates `toolhive-demo`, cleans the token file, and creates its Secret. |
-| `install-dex` | Installs Dex and waits for its Deployment. |
-| `install-toolhive-resources` | Applies the OIDC, MCP backend, group, and vMCP resources. |
-| `install-default-deny-policy` | Applies the initial Cedar policy after the ToolHive resources. |
-| `ready` | Waits for every ToolHive resource to become valid and ready. |
+- `create-cluster` creates the `toolhive-cedar-demo` Kind cluster.
+- `write-kubeconfig` saves its kubeconfig in `.state/kubeconfig`.
+- `install-operator-crds` installs the ToolHive Kubernetes APIs.
+- `install-operator` installs the ToolHive controller in `toolhive-system`.
+- `load-github-token` creates the demo namespace and token Secret without
+  displaying its value.
+- `install-dex` installs Dex with `alice@example.com` (password `password`) in
+  the `engineering` and `support` groups.
+- `install-toolhive-resources` creates the MCP backends, group, and virtual
+  server that receives the GitHub token as `GITHUB_PERSONAL_ACCESS_TOKEN`.
+- `install-default-deny-policy` applies the initial Cedar policy after the
+  ToolHive resources.
+- `ready` waits for the complete stack to become valid and ready.
+
+Alice's group claims grant no access on their own; the Cedar policies introduced
+later decide which capabilities each group receives.
 
 The Taskfile automatically points its commands at `.state/kubeconfig`. Export
 the same path in any terminal used for raw Helm or `kubectl` commands:
@@ -120,20 +125,7 @@ helm -n toolhive-system list
 
 Both ToolHive charts are pinned to `0.51.0` for a reproducible walkthrough.
 
-## 4. Inspect identity and credentials
-
-Dex has one static demo identity. Alice uses the password `password`:
-
-| User | Groups |
-| --- | --- |
-| `alice@example.com` | `engineering`, `support` |
-
-Alice carries both group claims, but group membership alone grants nothing.
-Cedar decides which capability each group receives. The GitHub token Secret is
-injected into the GitHub MCP server as `GITHUB_PERSONAL_ACCESS_TOKEN`; its value
-never appears in a manifest or terminal output.
-
-## 5. Inspect the MCP resources
+## 4. Inspect the MCP resources
 
 Show the manifest that `install-toolhive-resources` applied:
 
@@ -157,7 +149,7 @@ MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
 only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
 GitHub's `issue_read` and `add_issue_comment` tools.
 
-## 6. Confirm default deny and readiness
+## 5. Confirm default deny and readiness
 
 The setup deliberately creates the ToolHive resources before applying the
 authorization config they reference. It then installs the default-deny policy
@@ -180,7 +172,7 @@ Finally, show what the operator created:
 task status
 ```
 
-## 7. Build Alice's effective permissions
+## 6. Verify Alice's default-deny baseline
 
 First authenticate as Alice while the default-deny baseline is active:
 
@@ -189,6 +181,8 @@ task demo USER=alice@example.com
 ```
 
 Despite carrying both group claims, Alice sees an empty tool list.
+
+## 7. Build Alice's effective permissions
 
 Now apply policy 1, which gives `engineering` access to the MKP read tool:
 
