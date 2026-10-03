@@ -22,10 +22,10 @@ product as transition functions, and synthesizes the implicit
 `exfiltrate_data` permission. See
 [`analysis/README.md`](analysis/README.md).
 
-The [`policies/20-combined-access.cedar`](policies/20-combined-access.cedar)
+The [`policies/combined-access.cedar`](policies/combined-access.cedar)
 file is the source of truth for the vulnerable Cedar policy set. It contains a
 deliberate bug that is fixed in
-[`policies/20-combined-access-fixed.cedar`](policies/20-combined-access-fixed.cedar).
+[`policies/combined-access-fixed.cedar`](policies/combined-access-fixed.cedar).
 The ToolHive YAML manifests, transition JSON, and synthesized implicit Cedar
 policy are generated and checked for drift.
 

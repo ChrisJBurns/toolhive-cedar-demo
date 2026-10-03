@@ -38,7 +38,7 @@ func main() {
 		fail(err)
 	}
 
-	vulnerable, err := demo.ReadCedarFiles(resolve(*root, "policies/20-combined-access.cedar"))
+	vulnerable, err := demo.ReadCedarFiles(resolve(*root, "policies/combined-access.cedar"))
 	if err != nil {
 		fail(err)
 	}
@@ -53,7 +53,7 @@ func main() {
 	if err := demo.ValidateManifestBindings(environments, vulnerable, toolHiveManifest, dexManifest); err != nil {
 		fail(err)
 	}
-	fixed, err := demo.ReadCedarFiles(resolve(*root, "policies/20-combined-access-fixed.cedar"))
+	fixed, err := demo.ReadCedarFiles(resolve(*root, "policies/combined-access-fixed.cedar"))
 	if err != nil {
 		fail(err)
 	}

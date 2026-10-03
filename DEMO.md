@@ -187,7 +187,7 @@ and the two classified request lists:
 
 ```bash
 cat policies/toolhive.cedarschema
-cat policies/20-combined-access.cedar
+cat policies/combined-access.cedar
 cat analysis/request-environments.json
 ```
 
@@ -296,7 +296,7 @@ that the support role can inherit an unrelated engineering permit. Inspect the
 fixed native Cedar policy:
 
 ```bash
-cat policies/20-combined-access-fixed.cedar
+cat policies/combined-access-fixed.cedar
 ```
 
 Its `forbid` creates an explicit ceiling: support can call only `issue_read` and
