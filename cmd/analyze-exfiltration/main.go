@@ -23,6 +23,7 @@ func main() {
 	woodpecker := flag.String("cedar-woodpecker", ".state/bin/cedar-woodpecker", "cedar-woodpecker binary, relative to root")
 	cvc5 := flag.String("cvc5", ".state/cvc5/bin/cvc5", "cvc5 binary, relative to root")
 	check := flag.Bool("check", false, "verify the generated implicit policies are current")
+	fixedOnly := flag.Bool("fixed-only", false, "analyze and report only the fixed policy")
 	flag.Parse()
 
 	transitionsFile := resolve(*root, *transitionsPath)
@@ -33,6 +34,36 @@ func main() {
 	if len(transitions.Transitions) != 1 {
 		fail(fmt.Errorf("demo expects exactly one generated transition, got %d", len(transitions.Transitions)))
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	analyzer := demo.Analyzer{Woodpecker: resolve(*root, *woodpecker), CVC5: resolve(*root, *cvc5)}
+	if err := analyzer.ValidateTools(ctx); err != nil {
+		fail(err)
+	}
+	if *fixedOnly {
+		fixed, err := demo.ReadCedarFiles(resolve(*root, "policies/combined-access-fixed.cedar"))
+		if err != nil {
+			fail(err)
+		}
+		fixedCubes, err := analyzer.Cubes(ctx, resolve(*root, *schema), fixed)
+		if err != nil {
+			fail(fmt.Errorf("inspect fixed policy permissions: %w", err))
+		}
+		if err := demo.ValidateFixedCubes(fixedCubes); err != nil {
+			fail(err)
+		}
+		fixedResults, err := analyzer.Analyze(ctx, resolve(*root, *schema), transitionsFile, fixed)
+		if err != nil {
+			fail(fmt.Errorf("analyze fixed policies: %w", err))
+		}
+		if err := demo.ValidateFixedResults(fixedResults); err != nil {
+			fail(err)
+		}
+		fmt.Print(renderFixedReport())
+		return
+	}
+
 	environments, err := demo.ReadRequestEnvironments(resolve(*root, *environmentsPath))
 	if err != nil {
 		fail(err)
@@ -53,37 +84,18 @@ func main() {
 	if err := demo.ValidateManifestBindings(environments, vulnerable, toolHiveManifest, dexManifest); err != nil {
 		fail(err)
 	}
-	fixed, err := demo.ReadCedarFiles(resolve(*root, "policies/combined-access-fixed.cedar"))
-	if err != nil {
-		fail(err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-	analyzer := demo.Analyzer{Woodpecker: resolve(*root, *woodpecker), CVC5: resolve(*root, *cvc5)}
-	if err := analyzer.ValidateTools(ctx); err != nil {
-		fail(err)
-	}
 	vulnerableCubes, err := analyzer.Cubes(ctx, resolve(*root, *schema), vulnerable)
 	if err != nil {
 		fail(fmt.Errorf("inspect vulnerable policy permissions: %w", err))
 	}
-	fixedCubes, err := analyzer.Cubes(ctx, resolve(*root, *schema), fixed)
-	if err != nil {
-		fail(fmt.Errorf("inspect fixed policy permissions: %w", err))
-	}
-	if err := demo.ValidatePolicyCubes(vulnerableCubes, fixedCubes); err != nil {
+	if err := demo.ValidateVulnerableCubes(vulnerableCubes); err != nil {
 		fail(err)
 	}
 	vulnerableResults, err := analyzer.Analyze(ctx, resolve(*root, *schema), transitionsFile, vulnerable)
 	if err != nil {
 		fail(fmt.Errorf("analyze vulnerable policies: %w", err))
 	}
-	fixedResults, err := analyzer.Analyze(ctx, resolve(*root, *schema), transitionsFile, fixed)
-	if err != nil {
-		fail(fmt.Errorf("analyze fixed policies: %w", err))
-	}
-	if err := demo.ValidateDemoResults(vulnerableResults, fixedResults, transitions.Transitions[0].Name); err != nil {
+	if err := demo.ValidateVulnerableResults(vulnerableResults, transitions.Transitions[0].Name); err != nil {
 		fail(err)
 	}
 	implicit, err := demo.RenderImplicitPolicies(vulnerableResults)
@@ -105,8 +117,18 @@ Interpretation:
 - engineering can call list_resources, which reads internal data.
 - support can call add_issue_comment, which writes to the public internet.
 - support-bot@example.com belongs to both groups, so it derives exfiltrate_data.
-- The fixed policy has no exfiltration path.
 `, strings.TrimSpace(result.Policy))
+}
+
+func renderFixedReport() string {
+	return `Synthesized Cedar policy:
+
+(none)
+
+Interpretation:
+- Cedar Woodpecker found 0 exfiltration paths.
+- The fixed support boundary prevents the internal-data read from being combined with the public-internet write.
+`
 }
 
 func resolve(root, path string) string {

@@ -92,8 +92,8 @@ func (analyzer Analyzer) Cubes(ctx context.Context, schema string, policies []by
 	return cubes, nil
 }
 
-// ValidateDemoResults enforces the conference demo's expected safety claim.
-func ValidateDemoResults(vulnerable, fixed []Escalation, transitionName string) error {
+// ValidateVulnerableResults enforces the conference demo's expected finding.
+func ValidateVulnerableResults(vulnerable []Escalation, transitionName string) error {
 	if len(vulnerable) != 1 {
 		return fmt.Errorf("vulnerable policies: expected exactly one path, got %d", len(vulnerable))
 	}
@@ -116,19 +116,21 @@ func ValidateDemoResults(vulnerable, fixed []Escalation, transitionName string) 
 			return fmt.Errorf("vulnerable policies: implicit policy does not contain %s", required)
 		}
 	}
+	return nil
+}
+
+// ValidateFixedResults ensures the fixed policies have no exfiltration path.
+func ValidateFixedResults(fixed []Escalation) error {
 	if len(fixed) != 0 {
 		return fmt.Errorf("fixed policies: expected zero paths, got %d", len(fixed))
 	}
 	return nil
 }
 
-// ValidatePolicyCubes checks the vulnerable and fixed Cedar sources after
-// cedar-woodpecker has parsed and typechecked them.
-func ValidatePolicyCubes(vulnerable, fixed []Cube) error {
-	if err := validateCubeSet("vulnerable policies", vulnerable, vulnerableCubeExpectations()); err != nil {
-		return err
-	}
-	return validateCubeSet("fixed policies", fixed, fixedCubeExpectations())
+// ValidateVulnerableCubes checks the vulnerable Cedar source after
+// cedar-woodpecker has parsed and typechecked it.
+func ValidateVulnerableCubes(cubes []Cube) error {
+	return validateCubeSet("vulnerable policies", cubes, vulnerableCubeExpectations())
 }
 
 // ValidateFixedCubes ensures remediation removes only the dangerous composed

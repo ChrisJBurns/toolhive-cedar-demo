@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestValidateDemoResults(t *testing.T) {
+func TestValidateVulnerableResults(t *testing.T) {
 	t.Parallel()
 	vulnerable := []Escalation{{
 		Transition: "exfiltrate-via-list_resources-and-add_issue_comment",
@@ -17,11 +17,18 @@ principal in THVGroup::"engineering" && principal in THVGroup::"support"
 };`,
 	}}
 
-	if err := ValidateDemoResults(vulnerable, nil, vulnerable[0].Transition); err != nil {
-		t.Fatalf("ValidateDemoResults() error = %v", err)
+	if err := ValidateVulnerableResults(vulnerable, vulnerable[0].Transition); err != nil {
+		t.Fatalf("ValidateVulnerableResults() error = %v", err)
 	}
-	if err := ValidateDemoResults(vulnerable, vulnerable, vulnerable[0].Transition); err == nil || !strings.Contains(err.Error(), "expected zero") {
-		t.Fatalf("ValidateDemoResults() fixed error = %v, want non-zero fixed-path error", err)
+}
+
+func TestValidateFixedResults(t *testing.T) {
+	t.Parallel()
+	if err := ValidateFixedResults(nil); err != nil {
+		t.Fatalf("ValidateFixedResults() error = %v", err)
+	}
+	if err := ValidateFixedResults([]Escalation{{}}); err == nil || !strings.Contains(err.Error(), "expected zero paths") {
+		t.Fatalf("ValidateFixedResults() error = %v, want non-zero path error", err)
 	}
 }
 
@@ -60,28 +67,23 @@ func TestValidateFixedCubesRejectsUnconstrainedEngineeringRead(t *testing.T) {
 	}
 }
 
-func TestValidatePolicyCubes(t *testing.T) {
+func TestValidateVulnerableCubes(t *testing.T) {
 	t.Parallel()
 	vulnerable := []Cube{
 		fixedCube("engineering-read", engineeringCubeExpectations()[0].condition),
 		fixedCube("support-comment", supportCubeExpectations()[0].condition),
 		fixedCube("support-read", supportCubeExpectations()[1].condition),
 	}
-	fixed := []Cube{
-		fixedCube("engineering-read-constrained", fixedCubeExpectations()[0].condition),
-		fixedCube("support-comment", supportCubeExpectations()[0].condition),
-		fixedCube("support-read", supportCubeExpectations()[1].condition),
-	}
-	if err := ValidatePolicyCubes(vulnerable, fixed); err != nil {
-		t.Fatalf("ValidatePolicyCubes() error = %v", err)
+	if err := ValidateVulnerableCubes(vulnerable); err != nil {
+		t.Fatalf("ValidateVulnerableCubes() error = %v", err)
 	}
 }
 
-func TestValidatePolicyCubesRejectsIncompleteVulnerablePolicy(t *testing.T) {
+func TestValidateVulnerableCubesRejectsIncompletePolicy(t *testing.T) {
 	t.Parallel()
 	vulnerable := []Cube{fixedCube("engineering-read", engineeringCubeExpectations()[0].condition)}
-	if err := ValidatePolicyCubes(vulnerable, nil); err == nil || !strings.Contains(err.Error(), "vulnerable policies") {
-		t.Fatalf("ValidatePolicyCubes() error = %v, want vulnerable policy cube error", err)
+	if err := ValidateVulnerableCubes(vulnerable); err == nil || !strings.Contains(err.Error(), "vulnerable policies") {
+		t.Fatalf("ValidateVulnerableCubes() error = %v, want vulnerable policy cube error", err)
 	}
 }
 

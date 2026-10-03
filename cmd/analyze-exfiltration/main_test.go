@@ -26,7 +26,6 @@ Interpretation:
 - engineering can call list_resources, which reads internal data.
 - support can call add_issue_comment, which writes to the public internet.
 - support-bot@example.com belongs to both groups, so it derives exfiltrate_data.
-- The fixed policy has no exfiltration path.
 `
 
 	got := renderReport(demo.Escalation{Policy: "\n" + policy + "\n"})
@@ -37,5 +36,20 @@ Interpretation:
 		if strings.Contains(got, oldOutput) {
 			t.Errorf("renderReport() contains obsolete output %q", oldOutput)
 		}
+	}
+}
+
+func TestRenderFixedReport(t *testing.T) {
+	t.Parallel()
+	want := `Synthesized Cedar policy:
+
+(none)
+
+Interpretation:
+- Cedar Woodpecker found 0 exfiltration paths.
+- The fixed support boundary prevents the internal-data read from being combined with the public-internet write.
+`
+	if got := renderFixedReport(); got != want {
+		t.Fatalf("renderFixedReport() = %q, want %q", got, want)
 	}
 }

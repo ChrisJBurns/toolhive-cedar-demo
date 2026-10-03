@@ -162,11 +162,18 @@ tasks:
       - scripts/demo.sh "{{.USER}}"
 
   analyze-exfiltration:
-    desc: Compare vulnerable and fixed policies with Cedar Woodpecker
+    desc: Analyze the vulnerable policy with Cedar Woodpecker
     cmds:
       - go run ./cmd/generate-policy-manifests -check
       - go run ./cmd/generate-exfiltration-transitions -check >/dev/null
       - go run ./cmd/analyze-exfiltration -check
+
+  analyze-fixed-policy:
+    desc: Verify the fixed policy has no exfiltration paths
+    cmds:
+      - go run ./cmd/generate-policy-manifests -check
+      - go run ./cmd/generate-exfiltration-transitions -check >/dev/null
+      - go run ./cmd/analyze-exfiltration -fixed-only
 
   generate-analysis:
     desc: Regenerate policy manifests and Cedar analysis artifacts
@@ -270,8 +277,3 @@ tasks:
     cmds:
       - kind delete cluster --name "{{.CLUSTER_NAME}}"
       - rm -f "{{.KUBECONFIG}}"
-
-  down:
-    desc: Alias for cleanup
-    cmds:
-      - task: cleanup

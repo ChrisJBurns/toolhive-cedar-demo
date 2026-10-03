@@ -64,6 +64,13 @@ After installing Cedar Woodpecker and cvc5, run:
 task analyze-exfiltration
 ```
 
+To analyze only the fixed policy and show that it has zero exfiltration paths,
+run:
+
+```bash
+task analyze-fixed-policy
+```
+
 To intentionally refresh every generated artifact, run:
 
 ```bash

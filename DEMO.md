@@ -263,7 +263,7 @@ per-source `when` clause:
 cat analysis/exfiltration-transitions.json
 ```
 
-Run the checked analysis against both the vulnerable and fixed policy sets:
+Run the checked analysis against the vulnerable policy:
 
 ```bash
 task analyze-exfiltration
@@ -288,7 +288,6 @@ Interpretation:
 - engineering can call list_resources, which reads internal data.
 - support can call add_issue_comment, which writes to the public internet.
 - support-bot@example.com belongs to both groups, so it derives exfiltrate_data.
-- The fixed policy has no exfiltration path.
 ```
 
 The generated ToolHive YAML, transition JSON, and implicit policy are committed
@@ -321,6 +320,23 @@ The support bot still sees the two GitHub issue tools, but `list_resources` is
 no longer available. An engineering-only principal retains `list_resources`;
 the boundary follows the agent role rather than removing the engineering
 capability.
+
+Run Cedar Woodpecker against the fixed policy to verify that no implicit
+exfiltration permission remains:
+
+```bash
+task analyze-fixed-policy
+```
+
+```text
+Synthesized Cedar policy:
+
+(none)
+
+Interpretation:
+- Cedar Woodpecker found 0 exfiltration paths.
+- The fixed support boundary prevents the internal-data read from being combined with the public-internet write.
+```
 
 ## Cleanup
 
