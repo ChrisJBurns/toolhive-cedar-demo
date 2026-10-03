@@ -125,31 +125,7 @@ helm -n toolhive-system list
 
 Both ToolHive charts are pinned to `0.51.0` for a reproducible walkthrough.
 
-## 4. Inspect the MCP resources
-
-Show the manifest that `install-toolhive-resources` applied:
-
-```bash
-cat manifests/20-toolhive.yaml
-```
-
-That manifest creates the following pieces:
-
-1. An `MCPOIDCConfig` that trusts Dex.
-2. An intentionally overprivileged service account with the cluster-wide
-   `cluster-admin` role.
-3. An `MCPGroup` for the demo backends.
-4. An `MCPServer` running MKP in read-only mode.
-5. An `MCPServer` running the official GitHub server with its token injected
-   from the Kubernetes Secret.
-6. A `VirtualMCPServer` that aggregates both backends and enforces OIDC and
-   Cedar.
-
-MKP calls its tool `list_resources`. The vMCP aggregation allow-list advertises
-only that MKP tool, hiding `get_resource`. A separate allow-list advertises only
-GitHub's `issue_read` and `add_issue_comment` tools.
-
-## 5. Inspect the support bot's effective permissions
+## 4. Inspect the support bot's effective permissions
 
 The setup deliberately creates the ToolHive resources before applying the
 authorization config they reference. It then installs the vulnerable combined
@@ -174,12 +150,12 @@ The support bot now sees exactly `list_resources`, `issue_read`, and
 bot's effective permissions now contain both a private-data source and an
 external write destination.
 
-`setup-demo-cluster` composes visible, independently runnable tasks, while the
-sections above make each installed component and dependency explicit. The
-remaining Task helpers automate token acquisition, port-forwarding, MCP session
-setup, and policy reconciliation.
+`setup-demo-cluster` composes visible, independently runnable tasks, while
+section 2 summarises what each setup stage installs. The remaining Task helpers
+automate token acquisition, port-forwarding, MCP session setup, and policy
+reconciliation.
 
-## 6. Connect OpenCode
+## 5. Connect OpenCode
 
 OpenCode connects to the single vMCP endpoint, which routes requests to both
 MKP and GitHub. No ingress is required because OpenCode and Kind are running on
@@ -227,7 +203,7 @@ The support bot should see `list_resources`, `issue_read`, and
 `add_issue_comment` through the one `toolhive-demo` server. Refresh `DEX_TOKEN`
 and restart OpenCode if the token expires.
 
-## 7. Exfiltration
+## 6. Exfiltration
 
 Give OpenCode the following prompt:
 
@@ -239,7 +215,7 @@ After OpenCode reads the cluster data and posts it to the GitHub issue, analyse
 the Cedar policies to show that the same path was derivable before the agent
 ran.
 
-## 8. Analyse the compound permissions
+## 7. Analyse the compound permissions
 
 The live demo shows the exfiltration at runtime. Cedar Woodpecker finds the same
 compound permission statically from the policies, before an agent uses it. The
@@ -294,7 +270,7 @@ The generated ToolHive YAML, transition JSON, and implicit policy are committed
 to the repository. CI regenerates them from the native Cedar sources and fails
 if they drift.
 
-## 9. Apply the explicit boundary
+## 8. Apply the explicit boundary
 
 Each permission looks reasonable in isolation, but the analysis shows that the
 support bot can combine the engineering read with the support write. Inspect
