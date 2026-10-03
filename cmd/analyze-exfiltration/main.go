@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ChrisJBurns/toolhive-cedar-demo/internal/demo"
@@ -92,7 +93,20 @@ func main() {
 	if err := demo.WriteGenerated(resolve(*root, *output), implicit, *check); err != nil {
 		fail(err)
 	}
-	fmt.Printf("vulnerable policies: 1 engineering + support exfiltration path\nfixed policies: 0 exfiltration paths; 3 intended tool permissions retained\n")
+	fmt.Print(renderReport(vulnerableResults[0]))
+}
+
+func renderReport(result demo.Escalation) string {
+	return fmt.Sprintf(`Synthesized Cedar policy:
+
+%s
+
+Interpretation:
+- engineering can call list_resources, which reads internal data.
+- support can call add_issue_comment, which writes to the public internet.
+- support-bot@example.com belongs to both groups, so it derives exfiltrate_data.
+- The fixed policy has no exfiltration path.
+`, strings.TrimSpace(result.Policy))
 }
 
 func resolve(root, path string) string {

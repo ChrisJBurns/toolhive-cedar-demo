@@ -207,19 +207,26 @@ Run the checked analysis against both the vulnerable and fixed policy sets:
 task analyze-exfiltration
 ```
 
-The vulnerable policy produces one sound path requiring both roles. The fixed
-policy produces none, while retaining the intended engineering-only Kubernetes
-read and the two support GitHub permissions:
+The command prints the synthesized Cedar permission followed by a concise
+interpretation of the result:
 
 ```text
-vulnerable policies: 1 engineering + support exfiltration path
-fixed policies: 0 exfiltration paths; 3 intended fixed permissions retained
-```
+Synthesized Cedar policy:
 
-Inspect the generated Cedar finding directly:
+@woodpecker("exfiltrate-via-list_resources-and-add_issue_comment: policy0.cube0, policy1.cube0, policy2.cube0, policy0.cube0, policy1.cube0, policy2.cube0")
+permit(
+  principal is Client,
+  action == Action::"exfiltrate_data",
+  resource is Exfiltration
+) when {
+  (principal in THVGroup::"engineering") && (principal in THVGroup::"support")
+};
 
-```bash
-cat policies/implicit/with-implicit-permissions.cedar
+Interpretation:
+- engineering can call list_resources, which reads internal data.
+- support can call add_issue_comment, which writes to the public internet.
+- support-bot@example.com belongs to both groups, so it derives exfiltrate_data.
+- The fixed policy has no exfiltration path.
 ```
 
 The generated ToolHive YAML, transition JSON, and implicit policy are committed

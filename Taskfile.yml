@@ -165,7 +165,7 @@ tasks:
     desc: Compare vulnerable and fixed policies with Cedar Woodpecker
     cmds:
       - go run ./cmd/generate-policy-manifests -check
-      - go run ./cmd/generate-exfiltration-transitions -check
+      - go run ./cmd/generate-exfiltration-transitions -check >/dev/null
       - go run ./cmd/analyze-exfiltration -check
 
   generate-analysis:
