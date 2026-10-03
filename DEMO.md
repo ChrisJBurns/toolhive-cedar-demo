@@ -215,7 +215,7 @@ After OpenCode reads the cluster data and posts it to the GitHub issue, analyse
 the Cedar policies to show that the same path was derivable before the agent
 ran.
 
-## 7. Analyse the compound permissions
+## 7. Model the compound permission
 
 The live demo shows the exfiltration at runtime. Cedar Woodpecker finds the same
 compound permission statically from the policies, before an agent uses it. The
@@ -239,7 +239,10 @@ per-source `when` clause:
 cat analysis/exfiltration-transitions.json
 ```
 
-Run the checked analysis against the vulnerable policy:
+Those transitions describe the possible data movement. Now ask Cedar
+Woodpecker whether the current explicit permissions satisfy that model.
+
+## 8. Analyse the vulnerable policy
 
 ```bash
 task analyse-policy
@@ -270,8 +273,6 @@ The generated ToolHive YAML, transition JSON, and implicit policy are committed
 to the repository. CI regenerates them from the native Cedar sources and fails
 if they drift.
 
-## 8. Apply the explicit boundary
-
 Each permission looks reasonable in isolation, but the analysis shows that the
 support bot can combine the engineering read with the support write. Inspect
 the fixed native Cedar policy:
@@ -285,7 +286,10 @@ Its `forbid` creates an explicit ceiling: support can call only `issue_read` and
 exceptions do not grant access by themselves; the existing permits are still
 required.
 
-Apply the generated ToolHive manifest and authenticate again:
+The boundary is now ready to apply to the live vMCP and verify against the same
+analysis model.
+
+## 9. Apply and verify the explicit boundary
 
 ```bash
 task policy-fixed
