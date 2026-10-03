@@ -174,20 +174,21 @@ Dex has one static demo identity. Alice uses the password `password`:
 Alice carries both group claims, but group membership alone grants nothing.
 Cedar decides which capability each group receives.
 
-## 5. Establish the deny-by-default baseline
+## 5. Establish the default-deny baseline
 
-Start with an explicit deny-all policy so the vMCP can be created before either
+Start with a policy that never matches so the vMCP can be created before either
 of Alice's groups has permission to use a tool:
 
 ```bash
-cat policies/demo/00-deny-all.yaml
-kubectl apply -f policies/demo/00-deny-all.yaml
+cat policies/demo/00-default-deny.yaml
+kubectl apply -f policies/demo/00-default-deny.yaml
 ```
 
-The baseline contains no permits:
+ToolHive `0.51.0` requires at least one policy, so this nonmatching permit leaves
+Cedar's default-deny behavior in effect without conflicting with later permits:
 
 ```cedar
-forbid(principal, action == Action::"call_tool", resource);
+permit(principal, action, resource) when { false };
 ```
 
 ## 6. Create the MCP resources
@@ -234,7 +235,7 @@ task status
 
 ## 7. Build Alice's effective permissions
 
-First authenticate as Alice while the deny-all policy is active:
+First authenticate as Alice while the default-deny baseline is active:
 
 ```bash
 task demo USER=alice@example.com

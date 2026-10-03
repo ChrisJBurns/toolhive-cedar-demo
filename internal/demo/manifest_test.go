@@ -30,8 +30,8 @@ unless { resource in [Tool::"issue_read", Tool::"add_issue_comment"] };
 		t.Errorf("manifest does not have a generated-file header:\n%s", text)
 	}
 	for _, expected := range []string{
-		`      - 'permit( principal in THVGroup::"engineering", action == Action::"call_tool", resource == Tool::"list resources" );'`,
-		`      - 'forbid(principal in THVGroup::"support", action, resource) unless { resource in [Tool::"issue_read", Tool::"add_issue_comment"] };'`,
+		`      - 'permit ( principal in THVGroup::"engineering", action == Action::"call_tool", resource == Tool::"list resources" );'`,
+		`      - 'forbid ( principal in THVGroup::"support", action, resource ) unless { resource in [Tool::"issue_read", Tool::"add_issue_comment"] };'`,
 		"    entities_json: '[]'",
 	} {
 		if !strings.Contains(text, expected) {
@@ -43,7 +43,15 @@ unless { resource in [Tool::"issue_read", Tool::"add_issue_comment"] };
 func TestRenderToolHiveManifestRejectsIncompletePolicy(t *testing.T) {
 	t.Parallel()
 	_, err := RenderToolHiveManifest([]byte(`permit(principal, action, resource)`))
-	if err == nil || !strings.Contains(err.Error(), "trailing semicolon") {
-		t.Fatalf("RenderToolHiveManifest() error = %v, want missing semicolon", err)
+	if err == nil || !strings.Contains(err.Error(), "parse Cedar policies") {
+		t.Fatalf("RenderToolHiveManifest() error = %v, want Cedar parse error", err)
+	}
+}
+
+func TestRenderToolHiveManifestRejectsNoPolicies(t *testing.T) {
+	t.Parallel()
+	_, err := RenderToolHiveManifest([]byte(`// No policies here.`))
+	if err == nil || !strings.Contains(err.Error(), "contains no policies") {
+		t.Fatalf("RenderToolHiveManifest() error = %v, want empty policy set error", err)
 	}
 }

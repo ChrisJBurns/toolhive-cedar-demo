@@ -167,12 +167,12 @@ tasks:
     cmds:
       - go test ./...
 
-  policy-deny-all:
-    desc: Deny every exposed tool
+  policy-default-deny:
+    desc: Apply the default-deny baseline
     cmds:
       - task: apply-policy
         vars:
-          POLICY_FILE: policies/demo/00-deny-all.yaml
+          POLICY_FILE: policies/demo/00-default-deny.yaml
 
   policy-engineering:
     desc: Allow engineering to read Kubernetes resources

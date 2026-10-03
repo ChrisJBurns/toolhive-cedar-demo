@@ -77,11 +77,11 @@ func TestValidateStagedPolicyCubes(t *testing.T) {
 	}
 }
 
-func TestValidateStagedPolicyCubesRejectsDenyAllPermission(t *testing.T) {
+func TestValidateStagedPolicyCubesRejectsDefaultDenyPermission(t *testing.T) {
 	t.Parallel()
 	unexpected := []Cube{fixedCube("unexpected", engineeringCubeExpectations()[0].condition)}
-	if err := ValidateStagedPolicyCubes(unexpected, nil, nil, nil); err == nil || !strings.Contains(err.Error(), "deny-all") {
-		t.Fatalf("ValidateStagedPolicyCubes() error = %v, want deny-all cube error", err)
+	if err := ValidateStagedPolicyCubes(unexpected, nil, nil, nil); err == nil || !strings.Contains(err.Error(), "default-deny") {
+		t.Fatalf("ValidateStagedPolicyCubes() error = %v, want default-deny cube error", err)
 	}
 }
 

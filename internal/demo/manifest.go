@@ -7,14 +7,28 @@ import (
 	"os"
 	"strings"
 	"unicode"
+
+	cedar "github.com/cedar-policy/cedar-go"
 )
 
 // RenderToolHiveManifest converts a native Cedar policy file into the
 // ToolHive MCPAuthzConfig used by the live demo.
 func RenderToolHiveManifest(source []byte) ([]byte, error) {
-	policies, err := splitCedarPolicies(string(source))
+	policySet, err := cedar.NewPolicySetFromBytes("policies.cedar", source)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse Cedar policies: %w", err)
+	}
+
+	var policies []string
+	for index := 0; ; index++ {
+		policy := policySet.Get(cedar.PolicyID(fmt.Sprintf("policy%d", index)))
+		if policy == nil {
+			break
+		}
+		policies = append(policies, normalizeCedarWhitespace(string(policy.MarshalCedar())))
+	}
+	if len(policies) == 0 {
+		return nil, fmt.Errorf("Cedar source contains no policies")
 	}
 
 	var output strings.Builder
@@ -49,85 +63,6 @@ func GenerateToolHiveManifest(source, output string, check bool) error {
 		return fmt.Errorf("render %s: %w", source, err)
 	}
 	return WriteGenerated(output, manifest, check)
-}
-
-func splitCedarPolicies(source string) ([]string, error) {
-	var policies []string
-	var current strings.Builder
-	inString := false
-	escaped := false
-	inLineComment := false
-	inBlockComment := false
-
-	for index := 0; index < len(source); index++ {
-		character := source[index]
-		next := byte(0)
-		if index+1 < len(source) {
-			next = source[index+1]
-		}
-
-		switch {
-		case inLineComment:
-			if character == '\n' {
-				inLineComment = false
-				current.WriteByte(' ')
-			}
-			continue
-		case inBlockComment:
-			if character == '*' && next == '/' {
-				inBlockComment = false
-				current.WriteByte(' ')
-				index++
-			}
-			continue
-		case inString:
-			current.WriteByte(character)
-			if escaped {
-				escaped = false
-			} else if character == '\\' {
-				escaped = true
-			} else if character == '"' {
-				inString = false
-			}
-			continue
-		case character == '/' && next == '/':
-			inLineComment = true
-			index++
-			continue
-		case character == '/' && next == '*':
-			inBlockComment = true
-			index++
-			continue
-		case character == '"':
-			inString = true
-			current.WriteByte(character)
-			continue
-		case character == ';':
-			current.WriteByte(character)
-			policy := normalizeCedarWhitespace(current.String())
-			if policy != ";" {
-				policies = append(policies, policy)
-			}
-			current.Reset()
-			continue
-		default:
-			current.WriteByte(character)
-		}
-	}
-
-	if inString {
-		return nil, fmt.Errorf("unterminated Cedar string")
-	}
-	if inBlockComment {
-		return nil, fmt.Errorf("unterminated Cedar block comment")
-	}
-	if strings.TrimSpace(current.String()) != "" {
-		return nil, fmt.Errorf("Cedar policy is missing a trailing semicolon")
-	}
-	if len(policies) == 0 {
-		return nil, fmt.Errorf("Cedar source contains no policies")
-	}
-	return policies, nil
 }
 
 func normalizeCedarWhitespace(input string) string {

@@ -20,10 +20,10 @@ func main() {
 		source string
 		output string
 	}{
-		{"policies/00-deny-all.cedar", "policies/demo/00-deny-all.yaml"},
+		{"policies/00-default-deny.cedar", "policies/demo/00-default-deny.yaml"},
 		{"policies/10-engineering.cedar", "policies/demo/10-engineering.yaml"},
 		{"policies/20-combined-access.cedar", "policies/demo/20-combined-access.yaml"},
-		{"policies/00-deny-all.cedar", "policies/demo-fixed/00-deny-all.yaml"},
+		{"policies/00-default-deny.cedar", "policies/demo-fixed/00-default-deny.yaml"},
 		{"policies/10-engineering.cedar", "policies/demo-fixed/10-engineering.yaml"},
 		{"policies/20-combined-access-fixed.cedar", "policies/demo-fixed/20-combined-access.yaml"},
 	}

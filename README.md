@@ -22,9 +22,12 @@ product as transition functions, and synthesizes the implicit
 `exfiltrate_data` permission. See
 [`analysis/README.md`](analysis/README.md).
 
-Native Cedar files beside [`policies/toolhive.cedarschema`](policies/toolhive.cedarschema)
-are the policy sources of truth. The ToolHive YAML manifests, transition JSON,
-and synthesized implicit Cedar policy are generated and checked for drift.
+The [`policies/20-combined-access.cedar`](policies/20-combined-access.cedar)
+file is the source of truth for the vulnerable Cedar policy set. It contains a
+deliberate bug that is fixed in
+[`policies/20-combined-access-fixed.cedar`](policies/20-combined-access-fixed.cedar).
+The ToolHive YAML manifests, transition JSON, and synthesized implicit Cedar
+policy are generated and checked for drift.
 
 ## Pinned releases
 
@@ -85,7 +88,7 @@ MCP session, and lists the filtered tools without calling them.
 Start with no tool access:
 
 ```bash
-task policy-deny-all
+task policy-default-deny
 ```
 
 Then build Alice's effective permissions in two stages:

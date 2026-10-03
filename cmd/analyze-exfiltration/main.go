@@ -37,7 +37,7 @@ func main() {
 		fail(err)
 	}
 
-	denyAll, err := demo.ReadCedarFiles(resolve(*root, "policies/00-deny-all.cedar"))
+	defaultDeny, err := demo.ReadCedarFiles(resolve(*root, "policies/00-default-deny.cedar"))
 	if err != nil {
 		fail(err)
 	}
@@ -71,9 +71,9 @@ func main() {
 	if err := analyzer.ValidateTools(ctx); err != nil {
 		fail(err)
 	}
-	denyAllCubes, err := analyzer.Cubes(ctx, resolve(*root, *schema), denyAll)
+	defaultDenyCubes, err := analyzer.Cubes(ctx, resolve(*root, *schema), defaultDeny)
 	if err != nil {
-		fail(fmt.Errorf("inspect deny-all policy permissions: %w", err))
+		fail(fmt.Errorf("inspect default-deny policy permissions: %w", err))
 	}
 	engineeringCubes, err := analyzer.Cubes(ctx, resolve(*root, *schema), engineering)
 	if err != nil {
@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		fail(fmt.Errorf("inspect fixed policy permissions: %w", err))
 	}
-	if err := demo.ValidateStagedPolicyCubes(denyAllCubes, engineeringCubes, vulnerableCubes, fixedCubes); err != nil {
+	if err := demo.ValidateStagedPolicyCubes(defaultDenyCubes, engineeringCubes, vulnerableCubes, fixedCubes); err != nil {
 		fail(err)
 	}
 	vulnerableResults, err := analyzer.Analyze(ctx, resolve(*root, *schema), transitionsFile, vulnerable)

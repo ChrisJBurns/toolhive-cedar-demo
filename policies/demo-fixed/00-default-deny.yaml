@@ -8,6 +8,6 @@ spec:
   type: cedarv1
   config:
     policies:
-      - 'forbid(principal, action == Action::"call_tool", resource);'
+      - 'permit ( principal, action, resource ) when { false };'
     entities_json: '[]'
     group_claim_name: groups
