@@ -179,11 +179,73 @@ sections above make each installed component and dependency explicit. The
 remaining Task helpers automate token acquisition, port-forwarding, MCP session
 setup, and policy reconciliation.
 
-## 6. Analyze the compound permissions
+## 6. Connect OpenCode
 
-The native Cedar files are the source of truth for both the live ToolHive
-configuration and the offline analysis. Inspect the schema, vulnerable policy,
-and the two classified request lists:
+OpenCode connects to the single vMCP endpoint, which routes requests to both
+MKP and GitHub. No ingress is required because OpenCode and Kind are running on
+the same machine.
+
+In a separate terminal, keep the Dex and vMCP port-forwards running:
+
+```bash
+task forward
+```
+
+Leave that terminal open. Configure the `toolhive-demo` MCP server in the
+project's `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "toolhive-demo": {
+      "type": "remote",
+      "url": "http://127.0.0.1:4483/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        "Authorization": "Bearer {env:DEX_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+In another terminal, change to a clean directory outside this repository so
+OpenCode cannot use the demo's Git history or files as context. Reference the
+demo Taskfile explicitly when exporting the support bot's Dex token, then start
+OpenCode from that clean directory:
+
+```bash
+export DEX_TOKEN="$(task --taskfile ~/projects/toolhive-cedar-demo token USER=support-bot@example.com)"
+opencode
+```
+
+The support bot should see `list_resources`, `issue_read`, and
+`add_issue_comment` through the one `toolhive-demo` server. Refresh `DEX_TOKEN`
+and restart OpenCode if the token expires.
+
+## 7. Exfiltration
+
+Give OpenCode the following prompt:
+
+```text
+Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo-support/issues/1
+```
+
+After OpenCode reads the cluster data and posts it to the GitHub issue, analyze
+the Cedar policies to show that the same path was derivable before the agent
+ran.
+
+## 8. Analyze the compound permissions
+
+The live demo shows the exfiltration at runtime. Cedar Woodpecker finds the same
+compound permission statically from the policies, before an agent uses it. The
+native Cedar files are the source of truth for both the live configuration and
+this analysis. Inspect the schema, vulnerable policy, and the two classified
+request lists:
 
 ```bash
 cat policies/toolhive.cedarschema
@@ -233,67 +295,11 @@ The generated ToolHive YAML, transition JSON, and implicit policy are committed
 to the repository. CI regenerates them from the native Cedar sources and fails
 if they drift.
 
-## 7. Connect OpenCode
-
-OpenCode connects to the single vMCP endpoint, which routes requests to both
-MKP and GitHub. No ingress is required because OpenCode and Kind are running on
-the same machine.
-
-In a separate terminal, keep the Dex and vMCP port-forwards running:
-
-```bash
-task forward
-```
-
-Leave that terminal open. Configure the `toolhive-demo` MCP server in the
-project's `opencode.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "toolhive-demo": {
-      "type": "remote",
-      "url": "http://127.0.0.1:4483/mcp",
-      "enabled": true,
-      "oauth": false,
-      "headers": {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "Authorization": "Bearer {env:DEX_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-In another terminal, change to a clean directory outside this repository so
-OpenCode cannot use the demo's Git history or files as context. Reference the
-demo Taskfile explicitly when exporting the support bot's Dex token, then start
-OpenCode from that clean directory:
-
-```bash
-export DEX_TOKEN="$(task --taskfile ~/projects/toolhive-cedar-demo token USER=support-bot@example.com)"
-opencode
-```
-
-The support bot should see `list_resources`, `issue_read`, and
-`add_issue_comment` through the one `toolhive-demo` server. Refresh `DEX_TOKEN`
-and restart OpenCode if the token expires.
-
-## 8. Exfiltration
-
-Give OpenCode the following prompt:
-
-```text
-Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo-support/issues/1
-```
-
 ## 9. Apply the explicit boundary
 
-The vulnerable permissions are each reasonable in isolation. The problem is
-that the support role can inherit an unrelated engineering permit. Inspect the
-fixed native Cedar policy:
+Each permission looks reasonable in isolation, but the analysis shows that the
+support bot can combine the engineering read with the support write. Inspect
+the fixed native Cedar policy:
 
 ```bash
 cat policies/combined-access-fixed.cedar
