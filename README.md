@@ -98,13 +98,13 @@ The combined policy grants `list_resources` through `engineering` and grants
 internal-data reader and external writer enable the exfiltration demonstrated
 in `DEMO.md`.
 
-Analyze the vulnerable policy, apply the bounded version, and verify the fixed
+Analyse the vulnerable policy, apply the bounded version, and verify the fixed
 policy has no exfiltration path:
 
 ```bash
-task analyze-exfiltration
+task analyse-policy
 task policy-fixed
-task analyze-fixed-policy
+task analyse-policy-fixed
 ```
 
 The vulnerable policy produces one implicit exfiltration path. The fixed
@@ -139,8 +139,8 @@ task versions  # Installed charts and container images
 task github-secret GITHUB_TOKEN_FILE=/secure/path/github-token  # Rotate token
 task logs      # Operator, vMCP, and Dex logs
 task ready     # Wait for every resource
-task analyze-exfiltration  # Analyze the vulnerable Cedar policy
-task analyze-fixed-policy  # Verify the fixed policy has no exfiltration paths
+task analyse-policy        # Analyse the vulnerable Cedar policy
+task analyse-policy-fixed  # Verify the fixed policy has no exfiltration paths
 task generate-analysis     # Regenerate policy and analysis artifacts
 task test-analysis         # Test the Go generators
 task cleanup   # Delete the demo Kind cluster and saved kubeconfig

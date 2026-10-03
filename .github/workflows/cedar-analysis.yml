@@ -58,5 +58,5 @@ jobs:
 
       - name: Verify generated policies and analysis
         run: |
-          task analyze-exfiltration
-          task analyze-fixed-policy
+          task analyse-policy
+          task analyse-policy-fixed

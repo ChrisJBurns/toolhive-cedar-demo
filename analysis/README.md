@@ -61,14 +61,14 @@ intended GitHub permissions.
 After installing Cedar Woodpecker and cvc5, run:
 
 ```bash
-task analyze-exfiltration
+task analyse-policy
 ```
 
-To analyze only the fixed policy and show that it has zero exfiltration paths,
+To analyse only the fixed policy and show that it has zero exfiltration paths,
 run:
 
 ```bash
-task analyze-fixed-policy
+task analyse-policy-fixed
 ```
 
 To intentionally refresh every generated artifact, run:

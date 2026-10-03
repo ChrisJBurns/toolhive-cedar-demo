@@ -235,11 +235,11 @@ Give OpenCode the following prompt:
 Can you please triage this issue and investigate what the issue is https://github.com/ChrisJBurns/toolhive-cedar-demo-support/issues/1
 ```
 
-After OpenCode reads the cluster data and posts it to the GitHub issue, analyze
+After OpenCode reads the cluster data and posts it to the GitHub issue, analyse
 the Cedar policies to show that the same path was derivable before the agent
 ran.
 
-## 8. Analyze the compound permissions
+## 8. Analyse the compound permissions
 
 The live demo shows the exfiltration at runtime. Cedar Woodpecker finds the same
 compound permission statically from the policies, before an agent uses it. The
@@ -266,7 +266,7 @@ cat analysis/exfiltration-transitions.json
 Run the checked analysis against the vulnerable policy:
 
 ```bash
-task analyze-exfiltration
+task analyse-policy
 ```
 
 The command prints the synthesized Cedar permission followed by a concise
@@ -325,7 +325,7 @@ Run Cedar Woodpecker against the fixed policy to verify that no implicit
 exfiltration permission remains:
 
 ```bash
-task analyze-fixed-policy
+task analyse-policy-fixed
 ```
 
 ```text

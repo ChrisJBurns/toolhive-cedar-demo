@@ -161,15 +161,15 @@ tasks:
     cmds:
       - scripts/demo.sh "{{.USER}}"
 
-  analyze-exfiltration:
-    desc: Analyze the vulnerable policy with Cedar Woodpecker
+  analyse-policy:
+    desc: Analyse the vulnerable policy with Cedar Woodpecker
     cmds:
       - go run ./cmd/generate-policy-manifests -check
       - go run ./cmd/generate-exfiltration-transitions -check >/dev/null
       - go run ./cmd/analyze-exfiltration -check
 
-  analyze-fixed-policy:
-    desc: Verify the fixed policy has no exfiltration paths
+  analyse-policy-fixed:
+    desc: Analyse the fixed policy with Cedar Woodpecker
     cmds:
       - go run ./cmd/generate-policy-manifests -check
       - go run ./cmd/generate-exfiltration-transitions -check >/dev/null
